@@ -166,6 +166,7 @@ There is severe lack of tests currently.
 - No re-authentication in Alexa client, if cookie token is revoked for some reason `cookies.data` needs to be deleted (
   although they have 1 year expiry)
 - Authentication may be tricky and may require authing from a mobile app on the same network first to do CAPTCHA. 
+- Tests Alexa supported formats and if transcoding works/fixes issues, document it
 - Better/more secure way of setting configuration params
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
