@@ -171,7 +171,6 @@ There is severe lack of tests currently.
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
 - Volume controls
-- Separate port for /health & /metrics
 - Proper signature validation of incoming /skill requests
 - Per-device queue / state
 - More control over logging configuration
