@@ -19,7 +19,7 @@ See below for more details on Navidrome and Alexa integrations.
 ### How it looks like
 UI still needs a lot of work both on the look-and-feel side and how it integrates with Navidrome.
 
-<img alt="ui" src="doc/ui.gif">
+<img alt="ui" width="40%" src="doc/ui.gif">
 
 ## Installation
 
