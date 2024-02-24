@@ -48,19 +48,10 @@ jobs:
           tar czvf na-linux-amd64.tar.gz -C build na-linux-amd64 meow-linux-amd64
           tar czvf na-linux-arm64.tar.gz -C build na-linux-arm64 meow-linux-arm64
 
-      - name: create release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          draft: true
-          prerelease: false
-          body: |
-            Changes for this release:
-            - Add a list of changes here.
-
       - name: upload release assets
         uses: softprops/action-gh-release@v1
         with:
+          draft: true
           files: |
             na-linux-amd64.tar.gz
             na-linux-arm64.tar.gz
@@ -68,3 +59,6 @@ jobs:
             na-windows-arm64.zip
             na-darwin-amd64.tar.gz
             na-darwin-arm64.tar.gz
+          body: |
+            Changes for this release:
+            - Add a list of changes here.
