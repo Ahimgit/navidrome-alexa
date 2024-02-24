@@ -3,6 +3,9 @@ name: build
 on:
   push:
     branches: [ main ]
+    paths:
+      - '!README.md'
+      - '!docs/**'
 
 jobs:
   build:
