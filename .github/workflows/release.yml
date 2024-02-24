@@ -27,18 +27,18 @@ jobs:
       - name: build release files
         run: |
           mkdir build
-          GOOS=windows GOARCH=amd64 go build -v -o ./build/na-windows-amd64.exe ./cmd/na
-          GOOS=windows GOARCH=arm64 go build -v -o ./build/na-windows-arm64.exe ./cmd/na
-          GOOS=darwin GOARCH=amd64 go build  -v -o ./build/na-darwin-amd64 ./cmd/na
-          GOOS=darwin GOARCH=arm64 go build  -v -o ./build/na-darwin-arm64 ./cmd/na
-          GOOS=linux GOARCH=amd64 go build   -v -o ./build/na-linux-amd64 ./cmd/na
-          GOOS=linux GOARCH=arm64 go build   -v -o ./build/na-linux-arm64 ./cmd/na
-          GOOS=windows GOARCH=amd64 go build -v -o ./build/meow-windows-amd64.exe ./cmd/meow
-          GOOS=windows GOARCH=arm64 go build -v -o ./build/meow-windows-arm64.exe ./cmd/meow
-          GOOS=darwin GOARCH=amd64 go build  -v -o ./build/meow-darwin-amd64 ./cmd/meow
-          GOOS=darwin GOARCH=arm64 go build  -v -o ./build/meow-darwin-arm64 ./cmd/meow
-          GOOS=linux GOARCH=amd64 go build   -v -o ./build/meow-linux-amd64 ./cmd/meow
-          GOOS=linux GOARCH=arm64 go build   -v -o ./build/meow-linux-arm64 ./cmd/meow
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -v -o ./build/na-windows-amd64.exe ./cmd/na
+          GOOS=windows GOARCH=arm64 go build -ldflags "-s -w" -v -o ./build/na-windows-arm64.exe ./cmd/na
+          GOOS=darwin GOARCH=amd64 go build  -ldflags "-s -w" -v -o ./build/na-darwin-amd64 ./cmd/na
+          GOOS=darwin GOARCH=arm64 go build  -ldflags "-s -w" -v -o ./build/na-darwin-arm64 ./cmd/na
+          GOOS=linux GOARCH=amd64 go build   -ldflags "-s -w" -v -o ./build/na-linux-amd64 ./cmd/na
+          GOOS=linux GOARCH=arm64 go build   -ldflags "-s -w" -v -o ./build/na-linux-arm64 ./cmd/na
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -v -o ./build/meow-windows-amd64.exe ./cmd/meow
+          GOOS=windows GOARCH=arm64 go build -ldflags "-s -w" -v -o ./build/meow-windows-arm64.exe ./cmd/meow
+          GOOS=darwin GOARCH=amd64 go build  -ldflags "-s -w" -v -o ./build/meow-darwin-amd64 ./cmd/meow
+          GOOS=darwin GOARCH=arm64 go build  -ldflags "-s -w" -v -o ./build/meow-darwin-arm64 ./cmd/meow
+          GOOS=linux GOARCH=amd64 go build   -ldflags "-s -w" -v -o ./build/meow-linux-amd64 ./cmd/meow
+          GOOS=linux GOARCH=arm64 go build   -ldflags "-s -w" -v -o ./build/meow-linux-arm64 ./cmd/meow
       - name: package release files
         run: |
           zip -j na-windows-amd64.zip build/na-windows-amd64.exe build/na-windows-amd64.exe build/meow-windows-amd64.exe
