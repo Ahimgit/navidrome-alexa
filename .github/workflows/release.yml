@@ -8,6 +8,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +52,6 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
           body: |
@@ -60,7 +61,6 @@ jobs:
       - name: upload release assets
         uses: softprops/action-gh-release@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             na-linux-amd64.tar.gz
             na-linux-arm64.tar.gz
