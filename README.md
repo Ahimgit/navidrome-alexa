@@ -175,3 +175,4 @@ There is severe lack of tests currently.
 - Per-device queue / state
 - More control over logging configuration
 - More (than zero) tests
+- Voice commands are likley out of scope (althrough stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)
