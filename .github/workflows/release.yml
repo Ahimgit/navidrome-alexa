@@ -46,19 +46,21 @@ jobs:
           tar czvf na-linux-amd64.tar.gz -C build na-linux-amd64 meow-linux-amd64
           tar czvf na-linux-arm64.tar.gz -C build na-linux-arm64 meow-linux-arm64
 
-      - name: create Release
+      - name: create release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
           body: |
             Changes for this release:
             - Add a list of changes here.
 
-      - name: upload Release Assets
+      - name: upload release assets
         uses: softprops/action-gh-release@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             na-linux-amd64.tar.gz
             na-linux-arm64.tar.gz
