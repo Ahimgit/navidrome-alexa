@@ -71,15 +71,15 @@ func (httpClient *HttpClient) WithResponseLogger(f func(rq *http.Request, rqBody
 }
 
 func (httpClient *HttpClient) RestGET(url string, rqHeaders *Headers, rs any) (err error) {
-	if err != nil {
-		return errors.Wrap(err, "error creating http request")
-	}
 	rsBytes, _, err := httpClient.runHttpRequest("GET", url, rqHeaders, nil)
 	if err != nil {
 		return err
 	}
+	if rs == nil {
+		return nil // not expecting rs, don't unmarshal
+	}
 	if err = json.Unmarshal(rsBytes, rs); err != nil {
-		return errors.Wrapf(err, "error unmarshaling rs: %s", string(rsBytes))
+		return errors.Wrapf(err, "error unmarshalling rs: %s", string(rsBytes))
 	}
 	return nil
 }
@@ -87,40 +87,43 @@ func (httpClient *HttpClient) RestGET(url string, rqHeaders *Headers, rs any) (e
 func (httpClient *HttpClient) RestPOST(url string, rqHeaders *Headers, rq any, rs any) (err error) {
 	rqBytes, err := json.Marshal(rq)
 	if err != nil {
-		return errors.Wrap(err, "error marshaling rq")
-	}
-	if err != nil {
-		return errors.Wrap(err, "error creating http request")
+		return errors.Wrap(err, "error marshalling rq")
 	}
 	rsBytes, _, err := httpClient.runHttpRequest("POST", url, rqHeaders, rqBytes)
 	if err != nil {
 		return err
 	}
 	if rs == nil {
-		return nil
+		return nil // not expecting rs, don't unmarshal
 	}
 	if err = json.Unmarshal(rsBytes, rs); err != nil {
-		return errors.Wrapf(err, "error unmarshaling rs: %s", string(rsBytes))
+		return errors.Wrapf(err, "error unmarshalling rs: %s", string(rsBytes))
 	}
 	return nil
 }
 
 func (httpClient *HttpClient) SimpleGET(url string, rqHeaders *Headers) (rs *Response, err error) {
 	responseBytes, httpResponse, err := httpClient.runHttpRequest("GET", url, rqHeaders, nil)
+	if err != nil {
+		return nil, err
+	}
 	return &Response{
 		Status:   httpResponse.StatusCode,
 		Body:     string(responseBytes),
 		Redirect: httpResponse.Header.Get("Location"),
-	}, err
+	}, nil
 }
 
 func (httpClient *HttpClient) SimplePOST(url string, rqHeaders *Headers, formData *url.Values) (rs *Response, err error) {
 	responseBytes, httpResponse, err := httpClient.runHttpRequest("POST", url, rqHeaders, []byte(formData.Encode()))
+	if err != nil {
+		return nil, err
+	}
 	return &Response{
 		Status:   httpResponse.StatusCode,
 		Body:     string(responseBytes),
 		Redirect: httpResponse.Header.Get("Location"),
-	}, err
+	}, nil
 }
 
 func (httpClient *HttpClient) GetCookieJar() http.CookieJar {
@@ -143,24 +146,29 @@ func (httpClient *HttpClient) runHttpRequest(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error creating http request")
 	}
-	for _, header := range *rqHeaders {
-		rq.Header.Set(header.Key, header.Value)
+	if rqHeaders != nil {
+		for _, header := range *rqHeaders {
+			rq.Header.Set(header.Key, header.Value)
+		}
 	}
 	httpClient.requestLogger(rq, rqBody, nil)
 	rs, err = httpClient.Client.Do(rq)
 	if err != nil {
+		err = errors.Wrap(err, "error posting")
 		httpClient.responseLogger(rq, rqBody, nil, nil, err, startTime)
-		return nil, nil, errors.Wrap(err, "error posting")
+		return nil, nil, err
 	}
 	if rs.StatusCode >= 400 {
-		httpClient.responseLogger(rq, rqBody, rs, nil, nil, startTime)
-		return nil, rs, errors.Errorf("error posting status:%d, %s", rs.StatusCode, rs.Status)
+		err = errors.Errorf("error posting status:%d, %s", rs.StatusCode, rs.Status)
+		httpClient.responseLogger(rq, rqBody, rs, nil, nil, startTime) // err not propagated
+		return nil, rs, err
 	}
 	rsBody, err = io.ReadAll(rs.Body)
 	defer nopClose(rs.Body)
 	if err != nil {
+		err = errors.Wrap(err, "error reading response body")
 		httpClient.responseLogger(rq, rqBody, rs, rsBody, err, startTime)
-		return nil, rs, errors.Wrap(err, "error reading response body")
+		return nil, rs, err
 	}
 	httpClient.responseLogger(rq, rqBody, rs, rsBody, nil, startTime)
 	return rsBody, rs, nil
