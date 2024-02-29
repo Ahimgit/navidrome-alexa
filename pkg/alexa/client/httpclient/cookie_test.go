@@ -1,70 +1,66 @@
 package httpclient
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"testing"
 )
 
-var _ = Describe("CookieHelper", func() {
-	var (
-		cookieHelper   ICookieHelper
-		tempCookieFile *os.File
-		testBaseDomain = "example.com"
-	)
+func TestCookieHelper(t *testing.T) {
+	t.Run("CookiesSaved", func(t *testing.T) {
+		t.Run("the cookie file does not exist", func(t *testing.T) {
+			cookieHelper := NewCookieHelper("does not exist")
 
-	BeforeEach(func() {
-		tempFile, err := os.CreateTemp("", "test_cookies.*.data")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(tempFile.Close()).To(Succeed())
-		tempCookieFile = tempFile
-		cookieHelper = NewCookieHelper(tempCookieFile.Name())
-	})
-
-	AfterEach(func() {
-		os.Remove(tempCookieFile.Name())
-	})
-
-	Describe("CookiesSaved", func() {
-		Context("when the cookie file does not exist", func() {
-			It("should return false", func() {
-				os.Remove(tempCookieFile.Name())
-				Expect(cookieHelper.CookiesSaved()).To(BeFalse())
-			})
+			assert.False(t, cookieHelper.CookiesSaved())
 		})
 
-		Context("when the cookie file exists", func() {
-			It("should return true", func() {
-				Expect(cookieHelper.CookiesSaved()).To(BeTrue())
-			})
+		t.Run("the cookie file exists", func(t *testing.T) {
+			tempFile := createTempFile(t)
+			defer os.Remove(tempFile.Name())
+			cookieHelper := NewCookieHelper(tempFile.Name())
+
+			assert.True(t, cookieHelper.CookiesSaved())
 		})
 	})
 
-	Describe("Save and Load cookies", func() {
-		Context("when loading cookies", func() {
-			It("should save and load cookies from the file", func() {
-				savedJar, err := cookiejar.New(nil)
-				Expect(err).NotTo(HaveOccurred())
-				savedJar.SetCookies(&url.URL{Scheme: "https", Host: testBaseDomain, Path: "/"}, []*http.Cookie{
-					{Name: "test1", Value: "value1"},
-					{Name: "test2", Value: "value2"},
-				})
-				Expect(cookieHelper.SaveCookies(savedJar, testBaseDomain)).To(Succeed())
+	t.Run("Save and Load cookies", func(t *testing.T) {
+		tempFile := createTempFile(t)
+		defer os.Remove(tempFile.Name())
+		cookieHelper := NewCookieHelper(tempFile.Name())
 
-				loadedJar, err := cookiejar.New(nil)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(cookieHelper.LoadCookies(loadedJar, testBaseDomain)).To(Succeed())
-				cookies := loadedJar.Cookies(&url.URL{Scheme: "https", Host: "alexa." + testBaseDomain, Path: "/"})
-				Expect(cookies).To(HaveLen(2))
-				Expect(cookies[0].Name).To(Equal("test1"))
-				Expect(cookies[0].Value).To(Equal("value1"))
-				Expect(cookies[1].Name).To(Equal("test2"))
-				Expect(cookies[1].Value).To(Equal("value2"))
-			})
+		testBaseDomain := "example.com"
+
+		//save
+		savedJar, err := cookiejar.New(nil)
+		require.NoError(t, err)
+		savedJar.SetCookies(&url.URL{Scheme: "https", Host: testBaseDomain, Path: "/"}, []*http.Cookie{
+			{Name: "test1", Value: "value1"},
+			{Name: "test2", Value: "value2"},
 		})
-	})
+		require.NoError(t, cookieHelper.SaveCookies(savedJar, testBaseDomain))
 
-})
+		//load
+		loadedJar, err := cookiejar.New(nil)
+		require.NoError(t, err)
+		require.NoError(t, cookieHelper.LoadCookies(loadedJar, testBaseDomain))
+
+		//assert
+		cookies := loadedJar.Cookies(&url.URL{Scheme: "https", Host: "alexa." + testBaseDomain, Path: "/"})
+		require.Len(t, cookies, 2)
+		assert.Equal(t, "test1", cookies[0].Name)
+		assert.Equal(t, "value1", cookies[0].Value)
+		assert.Equal(t, "test2", cookies[1].Name)
+		assert.Equal(t, "value2", cookies[1].Value)
+	})
+}
+
+func createTempFile(t *testing.T) *os.File {
+	tempFile, err := os.CreateTemp("", "test_cookies.*.data")
+	require.NoError(t, err)
+	require.NoError(t, tempFile.Close())
+	return tempFile
+}

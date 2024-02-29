@@ -1,72 +1,48 @@
 package model
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestModel(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Model Suite")
+func TestQueueConstructor(t *testing.T) {
+	queue := NewQueue()
+	assert.Empty(t, queue.Songs)
+	assert.Equal(t, 0, queue.QueuePosition)
+	assert.Equal(t, 0, queue.TrackPosition)
+	assert.False(t, queue.Repeat)
+	assert.False(t, queue.Shuffle)
+	assert.False(t, queue.HasItems())
+	assert.False(t, queue.HasNext())
+	assert.False(t, queue.HasPrev())
 }
 
-var _ = Describe("Queue", func() {
-	var queue *Queue
+func TestQueueNavigation(t *testing.T) {
+	queue := NewQueue()
+	queue.Songs = append(queue.Songs, Song{Id: "1"})
+	queue.Songs = append(queue.Songs, Song{Id: "2"})
+	queue.Songs = append(queue.Songs, Song{Id: "3"})
+	assert.True(t, queue.HasItems())
 
-	BeforeEach(func() {
-		queue = NewQueue()
-	})
+	assert.True(t, queue.HasNext())
+	assert.False(t, queue.HasPrev())
+	assert.Nil(t, queue.Prev())
+	assert.Equal(t, &queue.Songs[0], queue.Current())
+	assert.Equal(t, &queue.Songs[1], queue.PeekNext())
+	assert.Equal(t, &queue.Songs[1], queue.Next()) // advance to 1
 
-	Describe("test constructor", func() {
-		Context("when calling constructor", func() {
-			It("creates an empty queue", func() {
-				Expect(queue.Songs).To(BeEmpty())
-				Expect(queue.QueuePosition).To(Equal(0))
-				Expect(queue.TrackPosition).To(Equal(0))
-				Expect(queue.Repeat).To(Equal(false))
-				Expect(queue.Shuffle).To(Equal(false))
-				Expect(queue.HasItems()).To(Equal(false))
-				Expect(queue.HasNext()).To(Equal(false))
-				Expect(queue.HasPrev()).To(Equal(false))
-			})
-		})
-	})
+	assert.True(t, queue.HasNext())
+	assert.True(t, queue.HasPrev())
+	assert.Equal(t, &queue.Songs[1], queue.Current())
+	assert.Equal(t, &queue.Songs[2], queue.PeekNext())
+	assert.Equal(t, &queue.Songs[2], queue.Next()) // advance to 2
 
-	Describe("test simple queue", func() {
-		Context("when navigating queue", func() {
-			It("moves to an appropriate item", func() {
-				queue.Songs = append(queue.Songs, Song{Id: "1"})
-				queue.Songs = append(queue.Songs, Song{Id: "2"})
-				queue.Songs = append(queue.Songs, Song{Id: "3"})
-				Expect(queue.HasItems()).To(Equal(true))
+	assert.False(t, queue.HasNext())
+	assert.True(t, queue.HasPrev())
+	assert.Equal(t, &queue.Songs[2], queue.Current())
+	assert.Nil(t, queue.PeekNext())
+	assert.Nil(t, queue.Next()) // no more elements
 
-				// 0 element
-				Expect(queue.HasNext()).To(Equal(true))
-				Expect(queue.HasPrev()).To(Equal(false))
-				Expect(queue.Prev()).To(BeNil())
-				Expect(queue.Current()).To(Equal(&queue.Songs[0]))
-				Expect(queue.PeekNext()).To(Equal(&queue.Songs[1]))
-				Expect(queue.Next()).To(Equal(&queue.Songs[1])) //advance
-
-				// 1 element
-				Expect(queue.HasNext()).To(Equal(true))
-				Expect(queue.HasPrev()).To(Equal(true))
-				Expect(queue.Current()).To(Equal(&queue.Songs[1]))
-				Expect(queue.PeekNext()).To(Equal(&queue.Songs[2]))
-				Expect(queue.Next()).To(Equal(&queue.Songs[2])) //advance
-
-				// 2 element
-				Expect(queue.HasNext()).To(Equal(false))
-				Expect(queue.HasPrev()).To(Equal(true))
-				Expect(queue.Current()).To(Equal(&queue.Songs[2]))
-				Expect(queue.PeekNext()).To(BeNil())
-				Expect(queue.Next()).To(BeNil()) //end
-
-				// back to 1 element
-				Expect(queue.Prev()).To(Equal(&queue.Songs[1])) // go back
-				Expect(queue.Current()).To(Equal(&queue.Songs[1]))
-			})
-		})
-	})
-})
+	assert.Equal(t, &queue.Songs[1], queue.Prev()) // go back one element
+	assert.Equal(t, &queue.Songs[1], queue.Current())
+}

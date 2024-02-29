@@ -37,7 +37,7 @@ func main() {
 		fmt.Println("Meow!")
 		time.Sleep(3 * time.Second)
 		err = alexaClient.PostSequenceCmd(model.BuildSpeakCmd(
-			"<audio src=\"soundbank://soundlibrary/animals/amzn_sfx_cat_angry_meow_1x_02\"/>", "en-US",
+			`<audio src="soundbank://soundlibrary/animals/amzn_sfx_cat_angry_meow_1x_02"/>`, "en-US",
 			device.DeviceType,
 			device.SerialNumber,
 			device.DeviceOwnerCustomerId),

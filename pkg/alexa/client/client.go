@@ -40,11 +40,11 @@ func NewAlexaClient(baseDomain string, user string, password string, cookieFile 
 	}
 }
 
-func NewAlexaClientWithHttpClient(baseDomain string, user string, password string, cookieFile string,
-	client httpclient.IHttpClient) IAlexaClient {
+func NewAlexaClientWithHttpClient(baseDomain string, user string, password string,
+	cookieHelper httpclient.ICookieHelper, client httpclient.IHttpClient) IAlexaClient {
 	return &AlexaClient{
 		client:       client,
-		cookieHelper: httpclient.NewCookieHelper(cookieFile),
+		cookieHelper: cookieHelper,
 		baseDomain:   baseDomain,
 		user:         user,
 		password:     password,
@@ -71,7 +71,7 @@ func (c *AlexaClient) LogIn() (err error) {
 		// get devices (sets csrf cookie) and save cookies
 		_, err = c.GetDevices()
 		if err != nil {
-			return fmt.Errorf("Alexa.LogIn getting devices failed: %w", err)
+			return errors.Wrap(err, "Alexa.LogIn getting devices failed")
 		}
 		if err := c.cookieHelper.SaveCookies(c.client.GetCookieJar(), c.baseDomain); err != nil {
 			return errors.Wrap(err, "Alexa.LogIn saving cookies failed")

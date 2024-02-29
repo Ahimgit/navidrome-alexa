@@ -77,7 +77,8 @@ func initAlexaClient(amazonDomain string, amazonUser string, amazonPassword stri
 	var client alexa.IAlexaClient
 	if logRequests {
 		http := httpclient.NewHttpClient().WithResponseLogger(mid.RequestLogsForClients())
-		client = alexa.NewAlexaClientWithHttpClient(amazonDomain, amazonUser, amazonPassword, amazonCookiePath, http)
+		cookie := httpclient.NewCookieHelper(amazonCookiePath)
+		client = alexa.NewAlexaClientWithHttpClient(amazonDomain, amazonUser, amazonPassword, cookie, http)
 	} else {
 		client = alexa.NewAlexaClient(amazonDomain, amazonUser, amazonPassword, amazonCookiePath)
 	}
