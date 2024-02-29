@@ -34,15 +34,15 @@ type IHttpClient interface {
 
 type HttpClient struct {
 	*http.Client
-	requestLogger  func(rq *http.Request, rqBody []byte, Error error)
-	responseLogger func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, Error error, start time.Time)
+	requestLogger  func(rq *http.Request, rqBody []byte)
+	responseLogger func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time)
 }
 
 func NewHttpClient() *HttpClient {
 	jar, _ := cookiejar.New(nil)
 	client := &HttpClient{
-		requestLogger: func(rq *http.Request, rqBody []byte, Error error) {},
-		responseLogger: func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, Error error, start time.Time) {
+		requestLogger: func(rq *http.Request, rqBody []byte) {},
+		responseLogger: func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {
 		},
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -60,12 +60,12 @@ func (httpClient *HttpClient) WithTimeout(duration time.Duration) *HttpClient {
 	return httpClient
 }
 
-func (httpClient *HttpClient) WithRequestLogger(f func(rq *http.Request, rqBody []byte, Error error)) *HttpClient {
+func (httpClient *HttpClient) WithRequestLogger(f func(rq *http.Request, rqBody []byte)) *HttpClient {
 	httpClient.requestLogger = f
 	return httpClient
 }
 
-func (httpClient *HttpClient) WithResponseLogger(f func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, Error error, start time.Time)) *HttpClient {
+func (httpClient *HttpClient) WithResponseLogger(f func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time)) *HttpClient {
 	httpClient.responseLogger = f
 	return httpClient
 }
@@ -151,7 +151,7 @@ func (httpClient *HttpClient) runHttpRequest(
 			rq.Header.Set(header.Key, header.Value)
 		}
 	}
-	httpClient.requestLogger(rq, rqBody, nil)
+	httpClient.requestLogger(rq, rqBody)
 	rs, err = httpClient.Client.Do(rq)
 	if err != nil {
 		err = errors.Wrap(err, "error posting")
@@ -159,7 +159,7 @@ func (httpClient *HttpClient) runHttpRequest(
 		return nil, nil, err
 	}
 	if rs.StatusCode >= 400 {
-		err = errors.Errorf("error posting status:%d, %s", rs.StatusCode, rs.Status)
+		err = errors.Errorf("error posting status: %d, %s", rs.StatusCode, rs.Status)
 		httpClient.responseLogger(rq, rqBody, rs, nil, nil, startTime) // err not propagated
 		return nil, rs, err
 	}

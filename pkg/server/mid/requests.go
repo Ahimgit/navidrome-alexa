@@ -64,8 +64,8 @@ func RequestLogsMiddleware(logRequests bool) gin.HandlerFunc {
 	}
 }
 
-func RequestLogsForClients() func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, Error error, start time.Time) {
-	return func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, error error, start time.Time) {
+func RequestLogsForClients() func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {
+	return func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {
 		logRequest("client",
 			rq.Method,
 			rq.URL.String(),
@@ -76,7 +76,7 @@ func RequestLogsForClients() func(rq *http.Request, rqBody []byte, rs *http.Resp
 			string(rqBody),
 			string(rsBody),
 			rs.StatusCode,
-			error,
+			err,
 			start, log.Logger(),
 		)
 	}

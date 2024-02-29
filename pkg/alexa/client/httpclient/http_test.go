@@ -5,8 +5,10 @@ import (
 	"github.com/h2non/gock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"net/http"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestHttpClient(t *testing.T) {
@@ -189,7 +191,7 @@ var _ = Describe("HttpClient", func() {
 			}, &rs)
 
 			Expect(err).To(Not(BeNil()))
-			Expect(err.Error()).To(Equal(`error posting status:400, 400 Bad Request`))
+			Expect(err.Error()).To(Equal(`error posting status: 400, 400 Bad Request`))
 		})
 
 	})
@@ -275,8 +277,83 @@ var _ = Describe("HttpClient", func() {
 			}, rq, &rs)
 
 			Expect(err).To(Not(BeNil()))
-			Expect(err.Error()).To(Equal(`error posting status:400, 400 Bad Request`))
+			Expect(err.Error()).To(Equal(`error posting status: 400, 400 Bad Request`))
+		})
+	})
+
+	Describe("test request logging", func() {
+		var lastRq *http.Request
+		var lastRqBody []byte
+		var lastRsRq *http.Request
+		var lastRsRqBody []byte
+		var lastRs *http.Response
+		var lastRsBody []byte
+		var lastRsErr error
+		var lastRsTime time.Time
+
+		BeforeEach(func() {
+			client = client.
+				WithRequestLogger(func(rq *http.Request, rqBody []byte) {
+					lastRq = rq
+					lastRqBody = rqBody
+				}).
+				WithResponseLogger(func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {
+					lastRsRq = rq
+					lastRsRqBody = rqBody
+					lastRs = rs
+					lastRsBody = rsBody
+					lastRsErr = err
+					lastRsTime = start
+				})
 		})
 
+		It("test rq/rs logging", func() {
+			gock.New("http://dummy").Post("/url").
+				MatchParam("param", "test1").
+				MatchHeader("X-Header1", "header-value-1").
+				BodyString(`{"rqField1":"rqVal1","rqField2":567}`).
+				Reply(200).
+				JSON(`{"field1":"val1","field2":321}`)
+
+			var rs TestRS
+			rq := TestRQ{RqField1: "rqVal1", RqField2: 567}
+			err := client.RestPOST("http://dummy/url?param=test1", &Headers{
+				{Key: "X-Header1", Value: "header-value-1"},
+			}, rq, &rs)
+
+			Expect(err).To(BeNil())
+			Expect(rs).To(Not(BeNil()))
+
+			Expect(lastRq).To(Not(BeNil()))
+			Expect(lastRq.URL.String()).To(Equal("http://dummy/url?param=test1"))
+			Expect(lastRq.Header.Get("X-Header1")).To(Equal("header-value-1"))
+			Expect(string(lastRqBody)).To(Equal(`{"rqField1":"rqVal1","rqField2":567}`))
+
+			Expect(lastRsRq).To(Equal(lastRq))
+			Expect(lastRsRqBody).To(Equal(lastRqBody))
+			Expect(lastRs).To(Not(BeNil()))
+			Expect(lastRs.StatusCode).To(Equal(200))
+			Expect(string(lastRsBody)).To(Equal(`{"field1":"val1","field2":321}`))
+			Expect(lastRsTime).To(Not(BeNil()))
+			Expect(lastRsErr).To(BeNil())
+		})
+
+		It("test rq/rs logging request with error", func() {
+			gock.New("http://dummy").Post("/url").
+				MatchParam("param", "test1").
+				MatchHeader("X-Header1", "header-value-1").
+				BodyString(`{"rqField1":"rqVal1","rqField2":567}`).
+				ReplyError(errors.New("mock error"))
+
+			var rs TestRS
+			rq := TestRQ{RqField1: "rqVal1", RqField2: 567}
+			err := client.RestPOST("http://dummy/url?param=test1", &Headers{
+				{Key: "X-Header1", Value: "header-value-1"},
+			}, rq, &rs)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(lastRsErr).To(Not(BeNil()))
+			Expect(lastRsErr.Error()).To(Equal(`error posting: Post "http://dummy/url?param=test1": mock error`))
+		})
 	})
 })
