@@ -504,11 +504,12 @@ naWidgetModule = (function () {
                     .form-group:hover { border: 1px solid #fff; }
                     .form-group > label {
                         position: absolute;
-                        top: -8px;
-                        left: 10px;
-                        padding: 2px;
+                        top: -9px;
+                        left: 8px;
+                        padding: 2px 4px 2px 4px;
                         pointer-events: none;
                         background-color: #000;
+                        border-radius: 2px;
                     }
                     .form-group > input, .form-group > select {
                         width: 160px;
@@ -526,8 +527,9 @@ naWidgetModule = (function () {
                         display: inline-block; cursor: pointer; user-select: none;
                         transition: background-color 0.1s, box-shadow 0.1s;
                         font-size: 12px; line-height: 15px; text-align: center; text-decoration: none; color: #FFF;
-                        border: none; border-radius: 2px; background-color: #424242;
+                        border: none; border-radius: 2px; background-color: rgba(0, 0, 0, 0.75);
                     }
+                    #controls .button { font-size: 22px; padding: 3px;  margin: 1px;}
                     .button.disabled { cursor: default; pointer-events: none; opacity: 0.5; background-color: #616161; box-shadow: none; }
                     .button:hover, .button:active { background-color: #616161; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
                     .hidden { display: none !important; }
@@ -562,10 +564,31 @@ naWidgetModule = (function () {
                         </div>
                     </div>
                     <div id="controls">
-                        <span id="prev" class="button disabled">&#x23EE;</span>
-                        <span id="play" class="button disabled">&#x23F5;</span>
-                        <span id="stop" class="button disabled">&#x23F8;︎</span>
-                        <span id="next" class="button disabled">&#x23ED;</span>                    
+                        <span id="prev" class="button disabled">
+                            <svg class="iconPrev"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="18,16 11.6,12 18,8" stroke="currentColor" fill="currentColor"/>
+                                <line x1="6.6" y1="6" x2="6.6" y2="18" stroke="currentColor" stroke-width="3"/>
+                            </svg>      
+                        </span>
+                        <span id="play" class="button disabled">
+                            <svg class="iconPlay" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="11" stroke="currentColor"/>
+                                <polygon points="9.6,16 16,12 9.6,8" stroke="currentColor" fill="currentColor"/>
+                            </svg>
+                        </span>
+                        <span id="stop" class="button disabled">
+                            <svg class="iconStop"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="11" stroke="currentColor"/>
+                                <line x1="9"  y1="8" x2="9" y2="16" stroke="currentColor" stroke-width="3"/>
+                                <line x1="15" y1="8" x2="15" y2="16" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                        </span>
+                        <span id="next" class="button disabled">
+                            <svg class="iconNext" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="6.6,16 13,12 6.6,8" stroke="currentColor" fill="currentColor"/>
+                                <line x1="18" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="3"/>
+                            </svg>                     
+                        </span>                    
                     </div>
                 </div>
             `;
@@ -576,10 +599,19 @@ naWidgetModule = (function () {
     class NavidromeUIIntegration {
         // here be dragons ; may cause severe eye damage ; you have been warned
 
+        static svgDevice = `
+            <svg class="iconDevice" xmlns="http://www.w3.org/2000/svg" height="24" width="24" viewBox="0 0 24 24" stroke-linecap="round">
+                <rect x="4" y="2" width="16" height="20" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="14" r="3" stroke="currentColor" fill="none"/>
+                <line x1="12" y1="7" x2="12.1" y2="7" stroke="currentColor" stroke-width="2"/>
+            </svg>`;
+
         #widgetElement;
+        #playButtonElement;
 
         constructor(widget) {
             this.#widgetElement = widget.getElement('widget');
+            this.#playButtonElement = widget.getElement('play');
         }
 
         #repositionWidget() {
@@ -613,15 +645,7 @@ naWidgetModule = (function () {
             const deviceButton = document.createElement('span');
             deviceButton.id = 'naWToggleButton';
             deviceButton.classList.add('group');
-            deviceButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg"  height="1em" width="1em"  viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                    <path d="M5 3m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"></path>
-                    <path d="M12 14m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path>
-                    <path d="M12 7l0 .01"></path>
-                </svg>
-            `;
+            deviceButton.innerHTML = NavidromeUIIntegration.svgDevice;
             deviceButton.addEventListener('click', () => {
                 this.#widgetElement.classList.toggle('hidden');
                 this.#repositionWidget();
@@ -630,6 +654,13 @@ naWidgetModule = (function () {
         }
 
         attachToNavidrome() {
+            this.#playButtonElement.addEventListener('click', () => {
+                // stop browser playback
+                document.querySelectorAll('audio').forEach(e => {
+                    e.pause();
+                });
+            });
+
             const naPlayerClass = 'react-jinke-music-player-main';
             const naPlayerMobileClass = 'react-jinke-music-player-mobile';
             const naPlayerPanelClass = 'music-player-panel';
