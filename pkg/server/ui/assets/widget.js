@@ -471,6 +471,12 @@ naWidgetModule = (function () {
             return this.shadowRoot.getElementById(id);
         }
 
+        #bindControls() {
+            this.getElement('closeButton').addEventListener('click', () => {
+                this.getElement('widget').classList.add('hidden');
+            });
+        }
+
         // @Overrides
         connectedCallback() {
             this.shadowRoot.innerHTML = `
@@ -482,9 +488,10 @@ naWidgetModule = (function () {
                         font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 10px; color: #b3b3b3;
                         border-radius: 4px 4px 0 0; 
                         background: rgba(0, 0, 0, 0.75);
-                        transition: right 0.3s ease-in-out, bottom 0.3s ease-in-out;
+                        transition: left 0.3s ease-in-out, bottom 0.3s ease-in-out;
                     }
                     #widget > div { margin: 8px 4px 4px 4px; }
+                    #closeButton { display: none; } 
                     #settings { display: flex; flex-direction: column; justify-content: center; }
                     #settingsButton { width: 160px; font-size: 10px; line-height: 9px; cursor: pointer; user-select: none; text-align: center; margin: 0 !important; }
                     #settingsButton:hover { color: #fff }
@@ -527,14 +534,24 @@ naWidgetModule = (function () {
                         display: inline-block; cursor: pointer; user-select: none;
                         transition: background-color 0.1s, box-shadow 0.1s;
                         font-size: 12px; line-height: 15px; text-align: center; text-decoration: none; color: #FFF;
-                        border: none; border-radius: 2px; background-color: rgba(0, 0, 0, 0.75);
+                        border: none; border-radius: 2px; background-color: rgba(0, 0, 0, 0.45);
                     }
                     #controls .button { font-size: 22px; padding: 3px;  margin: 1px;}
                     .button.disabled { cursor: default; pointer-events: none; opacity: 0.5; background-color: #616161; box-shadow: none; }
                     .button:hover, .button:active { background-color: #616161; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
                     .hidden { display: none !important; }
+                    
+                    #widget.mobile { top:0 !important; left:0 !important; height: 100vh; width: 100vw; overflow: hidden;  box-sizing: border-box; }                          
+                    #widget.mobile #closeButton { display: block; position: absolute; right: 20px; top: 20px; font-size: 24px; }
+                    #widget.mobile #controls .button { font-size: 34px; } 
                 </style>
                 <div id="widget" class="hidden">
+                    <span id="closeButton">
+                        <svg class="icon cross"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor"/>
+                            <line x1="5" y1="5" x2="19" y2="19" stroke="currentColor"/>
+                        </svg>    
+                    </span>
                     <div class="hidden" id="settings">
                         <div class="form-group">
                             <label for="apiUrl">API URL</label>
@@ -565,26 +582,26 @@ naWidgetModule = (function () {
                     </div>
                     <div id="controls">
                         <span id="prev" class="button disabled">
-                            <svg class="iconPrev"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="icon prev"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="18,16 11.6,12 18,8" stroke="currentColor" fill="currentColor"/>
                                 <line x1="6.6" y1="6" x2="6.6" y2="18" stroke="currentColor" stroke-width="3"/>
                             </svg>      
                         </span>
                         <span id="play" class="button disabled">
-                            <svg class="iconPlay" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="icon play" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="11" stroke="currentColor"/>
                                 <polygon points="9.6,16 16,12 9.6,8" stroke="currentColor" fill="currentColor"/>
                             </svg>
                         </span>
                         <span id="stop" class="button disabled">
-                            <svg class="iconStop"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="icon stop"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="11" stroke="currentColor"/>
                                 <line x1="9"  y1="8" x2="9" y2="16" stroke="currentColor" stroke-width="3"/>
                                 <line x1="15" y1="8" x2="15" y2="16" stroke="currentColor" stroke-width="3"/>
                             </svg>
                         </span>
                         <span id="next" class="button disabled">
-                            <svg class="iconNext" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="icon next" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="6.6,16 13,12 6.6,8" stroke="currentColor" fill="currentColor"/>
                                 <line x1="18" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="3"/>
                             </svg>                     
@@ -592,6 +609,8 @@ naWidgetModule = (function () {
                     </div>
                 </div>
             `;
+
+            this.#bindControls();
         }
     }
 
@@ -606,6 +625,11 @@ naWidgetModule = (function () {
                 <line x1="12" y1="7" x2="12.1" y2="7" stroke="currentColor" stroke-width="2"/>
             </svg>`;
 
+        static classPlayer = 'music-player-panel';
+        static classPlayerMobile = 'react-jinke-music-player-mobile';
+        static classPlaylist = 'audio-lists-panel';
+        static classLyricsButton = 'lyric-btn';
+
         #widgetElement;
         #playButtonElement;
 
@@ -614,34 +638,42 @@ naWidgetModule = (function () {
             this.#playButtonElement = widget.getElement('play');
         }
 
+        #getElementByClass(className) {
+            return document.querySelector('.' + className);
+        }
+
         #repositionWidget() {
-            const naPlaylist = document.querySelector('.audio-lists-panel');
-            if (!naPlaylist) {
-                return;
+            const naPlayer = this.#getElementByClass(NavidromeUIIntegration.classPlayer);
+            const naPlaylist = this.#getElementByClass(NavidromeUIIntegration.classPlaylist);
+            const naPlayerMobile = this.#getElementByClass(NavidromeUIIntegration.classPlayerMobile);
+            if (naPlayer) {
+                const widgetRect = this.#widgetElement.getBoundingClientRect();
+                const playlistRect = naPlaylist.getBoundingClientRect();
+                const playerRect = naPlayer.getBoundingClientRect();
+                this.#widgetElement.style.bottom = `${playerRect.height}px`;
+                this.#widgetElement.style.left = `${playlistRect.left - widgetRect.width}px`;
+                this.#widgetElement.classList.remove('mobile');
+            } else if (naPlayerMobile) {
+                this.#widgetElement.classList.add('mobile');
             }
-            const rect = naPlaylist.getBoundingClientRect();
-            this.#widgetElement.style.right = Math.round(document.documentElement.clientWidth - rect.left) + 'px';
-            this.#widgetElement.style.bottom = Math.round(document.documentElement.clientHeight - rect.bottom) + 'px';
         }
 
         #addWidgetPositioningListeners() {
-            const naPlaylist = document.querySelector('.audio-lists-panel');
-            if (!naPlaylist) {
-                return;
-            }
-            const reposition = () => {
+            const naPlaylist = this.#getElementByClass(NavidromeUIIntegration.classPlaylist);
+            const reposition = () => { // captures this.
                 this.#repositionWidget();
-            }; // cap this
-            naPlaylist.addEventListener('transitionend', reposition);
-            naPlaylist.addEventListener('animationend', reposition);
+            };
+            if (naPlaylist) {
+                naPlaylist.addEventListener('transitionend', reposition);
+                naPlaylist.addEventListener('animationend', reposition);
+            }
             window.addEventListener('resize', reposition);
         }
 
         #createDeviceIcon() {
-            const naLyricsButton = document.querySelector('.lyric-btn');
-            if (!naLyricsButton) {
-                return;
-            }
+            const naLyricsButton = this.#getElementByClass(NavidromeUIIntegration.classLyricsButton);
+            const naPlayerMobile = this.#getElementByClass(NavidromeUIIntegration.classPlayerMobile);
+
             const deviceButton = document.createElement('span');
             deviceButton.id = 'naWToggleButton';
             deviceButton.classList.add('group');
@@ -650,36 +682,45 @@ naWidgetModule = (function () {
                 this.#widgetElement.classList.toggle('hidden');
                 this.#repositionWidget();
             });
-            naLyricsButton.after(deviceButton);
+            if (naPlayerMobile) {
+                const li = document.createElement('li');
+                li.classList.add('item');
+                li.appendChild(deviceButton);
+                naLyricsButton.parentElement.after(li);
+            } else {
+                naLyricsButton.after(deviceButton);
+            }
         }
 
         attachToNavidrome() {
             this.#playButtonElement.addEventListener('click', () => {
-                // stop browser playback
-                document.querySelectorAll('audio').forEach(e => {
-                    e.pause();
+                document.querySelectorAll('audio').forEach(element => {
+                    element.pause(); // stop browser playback
                 });
             });
 
-            const naPlayerClass = 'react-jinke-music-player-main';
-            const naPlayerMobileClass = 'react-jinke-music-player-mobile';
-            const naPlayerPanelClass = 'music-player-panel';
             const bind = () => {
+                if (document.getElementById('naWToggleButton')) {
+                    return;
+                }
                 this.#createDeviceIcon();
                 this.#repositionWidget();
                 this.#addWidgetPositioningListeners();
             };
-            if (document.querySelector('.' + naPlayerClass) && !document.querySelector('.' + naPlayerMobileClass)) {
-                bind();
-            }
+
+            setTimeout(() => {
+                if (this.#getElementByClass(NavidromeUIIntegration.classLyricsButton)) {
+                    bind(); // direct element bind
+                }
+            }, 200);
             new MutationObserver(mutations => {
                 for (let mutation of mutations) {
                     if (mutation.addedNodes.length) {
                         mutation.addedNodes.forEach(node => {
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                if (node.classList.contains(naPlayerPanelClass) || node.classList.contains(naPlayerClass)) {
-                                    bind();
-                                }
+                            if (node.nodeType === Node.ELEMENT_NODE && (
+                                node.classList.contains(NavidromeUIIntegration.classPlayer) ||
+                                node.classList.contains(NavidromeUIIntegration.classPlayerMobile))) {
+                                bind(); // layout change bind
                             }
                         });
                     }
@@ -691,8 +732,8 @@ naWidgetModule = (function () {
     class Main {
         init() {
             customElements.define('na-widget', Widget);
-            const widget = new Widget();
             document.addEventListener('DOMContentLoaded', () => {
+                const widget = new Widget();
                 document.body.appendChild(widget);
                 const settingsAPI = new SettingsLocalStorageAPI(localStorage);
                 const queueAPI = new QueueLocalStorageAPI(localStorage);
