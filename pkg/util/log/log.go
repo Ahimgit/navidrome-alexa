@@ -19,7 +19,7 @@ func Init(structured bool, level slog.Level) {
 	if structured {
 		newLogger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: level}))
 	} else {
-		newLogger = slog.New(NewPlainTextHandler(os.Stdout, slog.LevelDebug))
+		newLogger = slog.New(NewPlainTextHandler(os.Stdout, level))
 	}
 	InitWithLogger(newLogger)
 }
@@ -49,13 +49,7 @@ func Logger() *slog.Logger {
 }
 
 func CreateLoggerContext(ginContext *gin.Context) context.Context {
-	var ctx = ginContext.Request.Context()
-	if val, exist := ginContext.Get(string(loggerKey)); exist {
-		ctx = context.WithValue(ctx, loggerKey, val.(*slog.Logger))
-	} else {
-		ctx = context.WithValue(ctx, loggerKey, rootLogger)
-	}
-	return context.WithValue(ctx, loggerKey, GetRequestContextLogger(ginContext))
+	return SetContextLogger(ginContext.Request.Context(), GetRequestContextLogger(ginContext))
 }
 
 func GetRequestContextLogger(ginContext *gin.Context) *slog.Logger {
@@ -64,6 +58,10 @@ func GetRequestContextLogger(ginContext *gin.Context) *slog.Logger {
 	} else {
 		return rootLogger
 	}
+}
+
+func SetContextLogger(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey, logger)
 }
 
 func GetContextLogger(context context.Context) *slog.Logger {
