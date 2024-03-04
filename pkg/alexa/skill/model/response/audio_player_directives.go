@@ -73,26 +73,6 @@ func NewAudioPlayerPlayDirectiveBuilder() *AudioPlayerPlayDirectiveBuilder {
 			Directive: Directive{
 				Type: "AudioPlayer.Play",
 			},
-			/*	AudioItem: &response.AudioItem{
-				Stream: &response.Stream{
-					//ExpectedPreviousToken: "",
-					Token:                "1",
-					URL:                  "https://navi.ican.cyou/rest/stream?u=Ahim&t=453dafc275e30f7c3629356e514d12d3&s=d7f2fe&f=json&v=1.8.0&c=NavidromeUI&id=ee4051c48d064db23c16d038a9274d25&_=1698989271674",
-					OffsetInMilliseconds: 0,
-				},
-				Metadata: &response.Metadata{
-					Title:    "Title",
-					Subtitle: "Subt",
-					//Art: Art{
-					//	ContentDescription: "",
-					//	Sources:            nil,
-					//},
-					//BackgroundImage: Art{
-					//	ContentDescription: "",
-					//	Sources:            nil,
-					//},
-				},
-			},*/
 		}}
 }
 

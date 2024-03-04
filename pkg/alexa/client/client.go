@@ -81,7 +81,11 @@ func (c *AlexaClient) LogIn() (err error) {
 			return errors.Wrap(err, "Alexa.LogIn loading cookies failed")
 		}
 	}
-	c.csrf = c.cookieHelper.ExtractCSRF(c.client.GetCookieJar(), c.baseDomain) // set csrf param
+	csrf := c.cookieHelper.ExtractCSRF(c.client.GetCookieJar(), c.baseDomain)
+	if csrf == "" {
+		return errors.New("Alexa.LogIn empty csrf cookie")
+	}
+	c.csrf = csrf // sets csrf param
 	return nil
 }
 
@@ -134,13 +138,13 @@ func submitLoginForm(baseDomain string, referer string, formData *url.Values, cl
 	formUrl := fmt.Sprintf("https://www.%s/ap/signin", baseDomain)
 	response, err := client.SimplePOST(formUrl, buildWebViewHeaders(referer), formData)
 	if err != nil {
-		return errors.Wrapf(err, "submit failed: %d", response.Status)
+		return errors.Wrap(err, "submit failed")
 	}
 	if response.Status != 302 || response.Redirect == "" {
 		return errors.Errorf("submit failed, wrong status: %d, successful login submit should be a redirect", response.Status)
 	}
 	if !strings.Contains(response.Redirect, "maplanding") {
-		return errors.Errorf("submit failed, try logining in form an app on the same network: %s", response.Redirect)
+		return errors.Errorf("submit failed, try logining in from an app on the same network: %s", response.Redirect)
 	}
 	return nil
 }

@@ -3,8 +3,10 @@ package client
 import (
 	"github.com/ahimgit/navidrome-alexa/pkg/alexa/client/httpclient"
 	"github.com/ahimgit/navidrome-alexa/pkg/alexa/client/model"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/url"
 	"testing"
@@ -17,25 +19,26 @@ func TestAlexaClientLogIn(t *testing.T) {
 
 		expectedDomain := "example.com"
 		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
 		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
 		expectedFormPostURL := "https://www.example.com/ap/signin"
 		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "https://www.example.com/maplanding"}
 		expectedDevicesCallURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
 
 		mockCookieHelper.On("CookiesSaved").Return(false)
-		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(&httpclient.Response{Body: expectedFormBody, Status: 200}, noError())
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
 		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
 		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
 		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(noError())
 		mockHttpClient.On("GetCookieJar").Return(cookieJar)
-		mockCookieHelper.On("ExtractCSRF", cookieJar, expectedDomain).Return("csrfToken")
 		mockCookieHelper.On("SaveCookies", cookieJar, expectedDomain).Return(noError())
+		mockCookieHelper.On("ExtractCSRF", cookieJar, expectedDomain).Return("csrfToken")
 		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders("csrfToken"), &model.DevicesResponse{}).Return(noError())
 
 		err := alexaClient.LogIn()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		_, err = alexaClient.GetDevices() // verify csrf token is set after login
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		mockCookieHelper.AssertExpectations(t)
 		mockHttpClient.AssertExpectations(t)
@@ -52,16 +55,209 @@ func TestAlexaClientLogIn(t *testing.T) {
 		mockCookieHelper.On("ExtractCSRF", cookieJar, expectedDomain).Return("csrfToken")
 
 		err := alexaClient.LogIn()
-		assert.NoError(t, err)
 
+		require.NoError(t, err)
 		mockCookieHelper.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, get form failed", func(t *testing.T) {
+		expectedError := errors.New("mock error")
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(nil, expectedError)
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn getting form failed: getting login form failed: mock error")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, get form failed with status code", func(t *testing.T) {
+		expectedFormGetResponse := &httpclient.Response{Body: "?", Status: 401}
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+
+		err := alexaClient.LogIn()
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn getting form failed: getting login form returned wrong status: 401")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, submit form failed", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedError := errors.New("mock error")
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(nil, expectedError)
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn submit form failed: submit failed: mock error")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, submit form failed with status code", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 200, Body: "enter captcha"}
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn submit form failed: submit failed, wrong status: 200, successful login submit should be a redirect")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, submit form failed with status code", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 200, Body: "enter captcha"}
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn submit form failed: submit failed, wrong status: 200, successful login submit should be a redirect")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, submit form failed with wrong redirect", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "wrong/redirect/url"}
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn submit form failed: submit failed, try logining in from an app on the same network: wrong/redirect/url")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, get devices failed", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "https://www.example.com/maplanding"}
+		expectedDevicesCallURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
+		expectedError := errors.New("mock error")
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(expectedError)
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn getting devices failed: Alexa.GetDevices failed: mock error")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, save cookies failed", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		cookieJar := new(MockCookieJar)
+
+		expectedDomain := "example.com"
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "https://www.example.com/maplanding"}
+		expectedDevicesCallURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
+		expectedError := errors.New("mock error")
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(noError())
+		mockHttpClient.On("GetCookieJar").Return(cookieJar)
+		mockCookieHelper.On("SaveCookies", cookieJar, expectedDomain).Return(expectedError)
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn saving cookies failed: mock error")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("LogIn with no saved cookies, could not extract csrf", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		cookieJar := new(MockCookieJar)
+
+		expectedDomain := "example.com"
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "https://www.example.com/maplanding"}
+		expectedDevicesCallURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
+
+		mockCookieHelper.On("CookiesSaved").Return(false)
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(noError())
+		mockHttpClient.On("GetCookieJar").Return(cookieJar)
+		mockCookieHelper.On("SaveCookies", cookieJar, expectedDomain).Return(noError())
+		mockCookieHelper.On("ExtractCSRF", cookieJar, expectedDomain).Return("")
+
+		err := alexaClient.LogIn()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.LogIn empty csrf cookie")
+		mockCookieHelper.AssertExpectations(t)
+		mockHttpClient.AssertExpectations(t)
 	})
 }
 
 func TestAlexaClientAPIs(t *testing.T) {
-	mockHttpClient, _, alexaClient := initClient()
 
 	t.Run("PostSequenceCmd", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
 		expectedURL := "https://alexa.example.com/api/behaviors/preview"
 		expectedRequest := model.AlexaCmd{BehaviorID: "mockCommand"}
 		mockHttpClient.
@@ -70,11 +266,26 @@ func TestAlexaClientAPIs(t *testing.T) {
 
 		err := alexaClient.PostSequenceCmd(expectedRequest)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("PostSequenceCmd, error", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
+		expectedURL := "https://alexa.example.com/api/behaviors/preview"
+		expectedRequest := model.AlexaCmd{BehaviorID: "mockCommand"}
+		expectedError := errors.New("mock error")
+		mockHttpClient.On("RestPOST", expectedURL, expectedHeaders(""), expectedRequest, nil).Return(expectedError)
+
+		err := alexaClient.PostSequenceCmd(expectedRequest)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.PostSequenceCmd failed: mock error")
 		mockHttpClient.AssertExpectations(t)
 	})
 
 	t.Run("GetDevices", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
 		expectedURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
 		expectedResponse := model.DevicesResponse{Devices: []model.Device{{AccountName: "device1"}}}
 		mockHttpClient.
@@ -87,10 +298,24 @@ func TestAlexaClientAPIs(t *testing.T) {
 
 		actualResponse, err := alexaClient.GetDevices()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expectedResponse, actualResponse)
 		mockHttpClient.AssertExpectations(t)
 	})
+
+	t.Run("GetDevices, error", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
+		expectedURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
+		expectedError := errors.New("mock error")
+		mockHttpClient.On("RestGET", expectedURL, expectedHeaders(""), &model.DevicesResponse{}).Return(expectedError)
+
+		_, err := alexaClient.GetDevices()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.GetDevices failed: mock error")
+		mockHttpClient.AssertExpectations(t)
+	})
+
 }
 
 func initClient() (mockHttpClient *MockIHttpClient, mockCookieHelper *MockICookieHelper, alexaClient IAlexaClient) {
@@ -159,6 +384,8 @@ func expectedHeaders(csrf string) *httpclient.Headers {
 		httpclient.Header{Key: "Accept-Language", Value: "en-US"}}
 }
 
+// todo consider codegen for mocks
+
 type MockCookieJar struct {
 	mock.Mock
 }
@@ -183,12 +410,22 @@ func (m *MockIHttpClient) GetCookieJar() (jar http.CookieJar) {
 
 func (m *MockIHttpClient) SimpleGET(url string, headers *httpclient.Headers) (*httpclient.Response, error) {
 	args := m.Called(url, headers)
-	return args.Get(0).(*httpclient.Response), args.Error(1)
+	ret1 := args.Get(0)
+	ret2 := args.Error(1)
+	if ret1 == nil {
+		return nil, ret2
+	}
+	return ret1.(*httpclient.Response), ret2
 }
 
 func (m *MockIHttpClient) SimplePOST(url string, headers *httpclient.Headers, formData *url.Values) (*httpclient.Response, error) {
 	args := m.Called(url, headers, formData)
-	return args.Get(0).(*httpclient.Response), args.Error(1)
+	ret1 := args.Get(0)
+	ret2 := args.Error(1)
+	if ret1 == nil {
+		return nil, ret2
+	}
+	return ret1.(*httpclient.Response), ret2
 }
 
 func (m *MockIHttpClient) RestGET(url string, headers *httpclient.Headers, response interface{}) error {
