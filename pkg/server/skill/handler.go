@@ -8,12 +8,16 @@ import (
 	"github.com/ahimgit/navidrome-alexa/pkg/util/log"
 )
 
+type IHandlerSelector interface {
+	HandleRequest(rqe *request.RequestEnvelope, c context.Context) (rs *response.ResponseEnvelope)
+}
+
 type HandlerSelector struct {
 	StreamDomain string
 	Queue        *model.Queue
 }
 
-func NewHandlerSelector(queue *model.Queue, StreamDomain string) *HandlerSelector {
+func NewHandlerSelector(queue *model.Queue, StreamDomain string) IHandlerSelector {
 	return &HandlerSelector{Queue: queue, StreamDomain: StreamDomain}
 }
 

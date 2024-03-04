@@ -8,11 +8,11 @@ import (
 )
 
 type SkillAPI struct {
-	HandlerSelector *HandlerSelector
+	HandlerSelector IHandlerSelector
 	AlexaSkillId    string
 }
 
-func NewSkillAPI(handlerSelector *HandlerSelector, alexaSkillId string) *SkillAPI {
+func NewSkillAPI(handlerSelector IHandlerSelector, alexaSkillId string) *SkillAPI {
 	return &SkillAPI{
 		HandlerSelector: handlerSelector,
 		AlexaSkillId:    alexaSkillId,
