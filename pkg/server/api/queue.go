@@ -26,7 +26,7 @@ func (api *QueueAPI) PostQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "queue updated"})
 }
 
-func (api *QueueAPI) GetNowPlaying(c *gin.Context) { // todo: sse
+func (api *QueueAPI) GetNowPlaying(c *gin.Context) {
 	if api.Queue.HasItems() {
 		c.JSON(http.StatusOK, gin.H{
 			"state": api.Queue.State,

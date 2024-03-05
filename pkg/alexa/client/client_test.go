@@ -316,6 +316,38 @@ func TestAlexaClientAPIs(t *testing.T) {
 		mockHttpClient.AssertExpectations(t)
 	})
 
+	t.Run("GetVolume", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
+		expectedURL := "https://alexa.example.com/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes"
+		expectedResponse := model.VolumeResponse{Volumes: []model.Volume{{Dsn: "device1"}}}
+		mockHttpClient.
+			On("RestGET", expectedURL, expectedHeaders(""), &model.VolumeResponse{}).
+			Run(func(args mock.Arguments) {
+				arg := args.Get(2).(*model.VolumeResponse)
+				*arg = expectedResponse
+			}).
+			Return(noError())
+
+		actualResponse, err := alexaClient.GetVolume()
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedResponse, actualResponse)
+		mockHttpClient.AssertExpectations(t)
+	})
+
+	t.Run("GetVolume, error", func(t *testing.T) {
+		mockHttpClient, _, alexaClient := initClient()
+		expectedURL := "https://alexa.example.com/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes"
+		expectedError := errors.New("mock error")
+		mockHttpClient.On("RestGET", expectedURL, expectedHeaders(""), &model.VolumeResponse{}).Return(expectedError)
+
+		_, err := alexaClient.GetVolume()
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "Alexa.GetVolume failed: mock error")
+		mockHttpClient.AssertExpectations(t)
+	})
+
 }
 
 func initClient() (mockHttpClient *MockIHttpClient, mockCookieHelper *MockICookieHelper, alexaClient IAlexaClient) {

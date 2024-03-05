@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"strconv"
 )
 
 type OperationPayload struct {
@@ -12,6 +13,7 @@ type OperationPayload struct {
 	Text               string `json:"text,omitempty"`
 	TextToSpeak        string `json:"textToSpeak,omitempty"`
 	SoundStringID      string `json:"soundStringId,omitempty"`
+	Value              string `json:"value,omitempty"`
 }
 
 type StartNode struct {
@@ -59,6 +61,21 @@ func BuildSpeakCmd(
 		CustomerID:         mediaOwnerCustomerID,
 		Locale:             locale,
 		TextToSpeak:        text,
+	})
+}
+
+func BuildVolumeCmd(
+	volume int,
+	locale string,
+	deviceType string,
+	deviceSerialNumber string,
+	mediaOwnerCustomerID string) AlexaCmd {
+	return buildAlexaCmd("Alexa.DeviceControls.Volume", "", OperationPayload{
+		DeviceType:         deviceType,
+		DeviceSerialNumber: deviceSerialNumber,
+		CustomerID:         mediaOwnerCustomerID,
+		Locale:             locale,
+		Value:              strconv.Itoa(volume),
 	})
 }
 

@@ -19,6 +19,7 @@ type IAlexaClient interface {
 	LogIn() (err error)
 	PostSequenceCmd(command model.AlexaCmd) (err error)
 	GetDevices() (devices model.DevicesResponse, err error)
+	GetVolume() (devices model.VolumeResponse, err error)
 }
 
 type AlexaClient struct {
@@ -103,6 +104,14 @@ func (c *AlexaClient) GetDevices() (devices model.DevicesResponse, err error) {
 		return devices, errors.Wrap(err, "Alexa.GetDevices failed")
 	}
 	return devices, nil
+}
+
+func (c *AlexaClient) GetVolume() (volume model.VolumeResponse, err error) {
+	apiUrl := fmt.Sprintf("https://alexa.%s/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes", c.baseDomain)
+	if err = c.client.RestGET(apiUrl, buildAppHeaders(c.csrf), &volume); err != nil {
+		return volume, errors.Wrap(err, "Alexa.GetVolume failed")
+	}
+	return volume, nil
 }
 
 func getLoginForm(baseDomain string, client httpclient.IHttpClient) (formBody string, referer string, err error) {

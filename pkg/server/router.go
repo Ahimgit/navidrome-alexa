@@ -62,6 +62,8 @@ func StartRouter(config *Config) {
 	engine.POST("/api/stop", playerAPI.PostStop)
 	engine.POST("/api/next", playerAPI.PostNext)
 	engine.POST("/api/prev", playerAPI.PostPrev)
+	engine.POST("/api/volume", playerAPI.PostVolume)
+	engine.GET("/api/volume", playerAPI.GetVolume)
 	engine.GET("/api/devices", cached(playerAPI.GetDevices, store))
 
 	engine.POST("/skill", skillAPI.Post) // alexa skill api
