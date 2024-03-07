@@ -179,6 +179,14 @@ naWidgetModule = (function () {
             return this.#callAPI('GET', '/api/playing');
         }
 
+        getVolume() {
+            return this.#callAPI('GET', '/api/volume');
+        }
+
+        postVolume(deviceVolume) {
+            return this.#callAPI('POST', '/api/volume', deviceVolume);
+        }
+
         async #callAPI(method, path, requestBody) {
             try {
                 let headers = new Headers();
@@ -328,8 +336,12 @@ naWidgetModule = (function () {
 
         bindControls() {
             this.#pubSub.subscribeStatusUpdated((line1, line2) => {
-                this.#statusTextTopElement.innerText = line1;
-                this.#statusTextBottomElement.innerText = line2;
+                if (line1) {
+                    this.#statusTextTopElement.innerText = line1;
+                }
+                if (line2) {
+                    this.#statusTextBottomElement.innerText = line2;
+                }
             });
 
             setInterval(async () => {
@@ -369,8 +381,11 @@ naWidgetModule = (function () {
         #stopButtonElement;
         #prevButtonElement;
         #nextButtonElement;
+        #volumeSliderElement;
 
         #lastPostedQueue;
+        #lastPostedVolume;
+        #volumeTimer;
 
         constructor(widget, settingsAPI, playerAPI, queueAPI, pubSub) {
             this.#settingsAPI = settingsAPI;
@@ -381,6 +396,50 @@ naWidgetModule = (function () {
             this.#stopButtonElement = widget.getElement('stop');
             this.#prevButtonElement = widget.getElement('prev');
             this.#nextButtonElement = widget.getElement('next');
+            this.#volumeSliderElement = widget.getElement('volume');
+        }
+
+        #convertSliderToVolume(value) {
+            let volume = value / 100;
+            volume = Math.pow(volume, 2);
+            volume = Math.ceil(volume * 100);
+            return volume;
+        }
+
+        #convertVolumeToSliderValue(volume) {
+            return Math.sqrt(volume.volume / 100) * 100;
+        }
+
+        async #getCurrentVolume() {
+            if (this.#settingsAPI.isApiKeySet() && this.#settingsAPI.isApiUrlSet() && this.#settingsAPI.isDeviceSelected()) {
+                const volumeRS = await this.#playerAPI.getVolume();
+                if (volumeRS.error || !volumeRS.volumes) {
+                    this.#pubSub.publishStatusUpdated('Error getting volume', volumeRS.error, 'error');
+                    return;
+                }
+                const device = this.#settingsAPI.getDeviceSelected();
+                const volume = volumeRS.volumes.find(volume => volume.deviceSerialNumber === device.serialNumber);
+                if (volume) {
+                    this.#volumeSliderElement.value = this.#convertVolumeToSliderValue(volume.volume)
+                }
+            }
+            this.#volumeSliderElement.style.setProperty('--progress', this.#volumeSliderElement.value + '%');
+        }
+
+        #setVolume() {
+            let volume = this.#convertSliderToVolume(this.#volumeSliderElement.value);
+            clearTimeout(this.#volumeTimer);
+            this.#volumeTimer = setTimeout(async () => {
+                const rs = await this.#playerAPI.postVolume({
+                    device: this.#settingsAPI.getDeviceSelected(),
+                    volume: volume
+                });
+                if (rs.error) {
+                    this.#pubSub.publishStatusUpdated('Error sending volume', rs.error, 'error');
+                    return;
+                }
+                this.#lastPostedVolume = volume;
+            }, 1000);
         }
 
         #toggleControls() {
@@ -389,12 +448,14 @@ naWidgetModule = (function () {
                 this.#stopButtonElement.classList.remove('disabled');
                 this.#prevButtonElement.classList.remove('disabled');
                 this.#nextButtonElement.classList.remove('disabled');
+                this.#volumeSliderElement.disabled = false;
                 this.#pubSub.publishStatusUpdated('Ready', `To play on ${this.#settingsAPI.getDeviceSelected().name}`, 'error');
             } else {
                 this.#playButtonElement.classList.add('disabled');
                 this.#stopButtonElement.classList.add('disabled');
                 this.#prevButtonElement.classList.add('disabled');
                 this.#nextButtonElement.classList.add('disabled');
+                this.#volumeSliderElement.disabled = true;
                 this.#pubSub.publishStatusUpdated('Check your settings', 'Fill in API URL, Key and select Device', 'error');
             }
         }
@@ -402,6 +463,7 @@ naWidgetModule = (function () {
         bindControls() {
             this.#pubSub.subscribeSettingsUpdated(() => this.#toggleControls());
             this.#toggleControls();
+            this.#getCurrentVolume()
 
             const click = (element, callback) => {
                 element.addEventListener('click', async () => {
@@ -413,6 +475,16 @@ naWidgetModule = (function () {
                     }
                 });
             };
+
+            this.#volumeSliderElement.addEventListener('input', () => {
+                const volume = this.#convertSliderToVolume(this.#volumeSliderElement.value)
+                this.#pubSub.publishStatusUpdated('', `Volume: ${volume}%`, 'normal');
+                this.#volumeSliderElement.style.setProperty('--progress', this.#volumeSliderElement.value + '%');
+            });
+
+            this.#volumeSliderElement.addEventListener('change', () => {
+                this.#setVolume()
+            });
 
             click(this.#playButtonElement, async () => {
                 const queue = this.#queueAPI.getQueue();
@@ -489,25 +561,25 @@ naWidgetModule = (function () {
                         border-radius: 4px 4px 0 0; 
                         background: rgba(0, 0, 0, 0.75);
                         transition: left 0.3s ease-in-out, bottom 0.3s ease-in-out;
+                        padding: 4px;
                     }
-                    #widget > div { margin: 8px 4px 4px 4px; }
+                    #widget > div { margin-top: 8px; }
                     #closeButton { display: none; } 
                     #settings { display: flex; flex-direction: column; justify-content: center; }
-                    #settingsButton { width: 160px; font-size: 10px; line-height: 9px; cursor: pointer; user-select: none; text-align: center; margin: 0 !important; }
+                    #settingsButton { width: 160px; font-size: 10px; line-height: 9px; cursor: pointer; user-select: none; text-align: center; margin: 0 !important;}
                     #settingsButton:hover { color: #fff }
                     #status { display: flex; flex-direction: column; align-items: center; }
                     #status-text-top { padding: 2px 6px 2px 6px; display: inline-block; }
                     #status-text-top:hover { animation: marquee 7s linear infinite; }
                     #status-text-bottom { padding: 2px 6px 2px 6px; display: inline-block; font-size: 9px; }
                     #status-text-bottom:hover { animation: marquee 7s linear infinite; }
-                    .status-marquee { position: relative; width: 180px; margin: 0 8px 0 8px; overflow: hidden; white-space: nowrap; text-align: center; mask-image: linear-gradient(to left, transparent, black 4%, black 96%, transparent); }
+                    .status-marquee { position: relative; width: 160px; margin: 0 8px 0 8px; overflow: hidden; white-space: nowrap; text-align: center; mask-image: linear-gradient(to left, transparent, black 4%, black 96%, transparent); }
                     @keyframes marquee {
                         0% { transform: translateX(0); }
                         50% { transform: translateX(min(0px, calc(-100% + 180px))); }
                         100% { transform: translateX(0); }
-                    }
-                    
-                    .form-group { position: relative; margin: 6px; padding: 2px; display: inline-flex; border: 1px solid rgba(255, 255, 255, 0.23); border-radius: 4px; }
+                    }                    
+                    .form-group { position: relative; margin: 10px 4px 4px 4px; padding: 2px; display: inline-flex; border: 1px solid rgba(255, 255, 255, 0.23); border-radius: 4px; }
                     .form-group:hover { border: 1px solid #fff; }
                     .form-group > label {
                         position: absolute;
@@ -528,19 +600,31 @@ naWidgetModule = (function () {
                         background: none;
                     }
                     .form-group > select > option { color: #fff; background: rgba(0, 0, 0, 0.3); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
-                    .form-row { margin:8px; display: inline-flex; justify-content: center; }
+                    .form-row { margin: 6px 4px 4px 4px; display: inline-flex; justify-content: center; }
                     .button {
                         margin: 4px; padding: 3px 10px 5px 10px;
                         display: inline-block; cursor: pointer; user-select: none;
                         transition: background-color 0.1s, box-shadow 0.1s;
-                        font-size: 12px; line-height: 15px; text-align: center; text-decoration: none; color: #FFF;
+                        font-size: 12px; line-height: 15px; text-align: center; text-decoration: none; color: #fff;
                         border: none; border-radius: 2px; background-color: rgba(0, 0, 0, 0.45);
                     }
+                    #controls { display: flex; flex-direction: column; justify-content: center;  }
                     #controls .button { font-size: 22px; padding: 3px;  margin: 1px;}
                     .button.disabled { cursor: default; pointer-events: none; opacity: 0.5; background-color: #616161; box-shadow: none; }
                     .button:hover, .button:active { background-color: #616161; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
-                    .hidden { display: none !important; }
+                    input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; height: 1rem; width: 120px; }
+                    input[type="range"]:focus { outline: none; }                                  
+                    input[type="range"]::-webkit-slider-runnable-track { border-radius: 0.5rem; height: 0.3rem; background: #5f5fc4 linear-gradient(to right, #5f5fc4 0%, #5f5fc4 var(--progress,0%), #fff var(--progress, 0%), #fff 100%); }
+                    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; background-color: #5f5fc4; outline: 2px solid #fff; border: none; margin-top: -0.1rem; border-radius: 0.5rem; height: 0.5rem; width: 0.5rem; } 
+                    input[type="range"]::-moz-range-track { border-radius: 0.5rem; height: 0.3rem; background: #5f5fc4 linear-gradient(to right, #5f5fc4 0%, #5f5fc4 var(--progress,0%), #fff var(--progress, 0%), #fff 100%); }
+                    input[type="range"]::-moz-range-thumb { background-color: #5f5fc4; outline: 2px solid #fff; border: none; border-radius: 0.5rem; height: 0.5rem; width: 0.5rem; }             
+                    input[type="range"]:disabled::-webkit-slider-runnable-track { background: #616161; }                    
+                    input[type="range"]:disabled::-webkit-slider-thumb { background: #616161; }         
+                    input[type="range"]:disabled::-moz-range-track { background: #616161; }                    
+                    input[type="range"]:disabled::-moz-range-thumb { background: #616161; }      
                     
+                    .hidden { display: none !important; }
+                   
                     #widget.mobile { top:0 !important; left:0 !important; height: 100vh; width: 100vw; overflow: hidden;  box-sizing: border-box; }                          
                     #widget.mobile #closeButton { display: block; position: absolute; right: 20px; top: 20px; font-size: 24px; }
                     #widget.mobile #controls .button { font-size: 34px; } 
@@ -581,32 +665,37 @@ naWidgetModule = (function () {
                         </div>
                     </div>
                     <div id="controls">
-                        <span id="prev" class="button disabled">
-                            <svg class="icon prev"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="18,16 11.6,12 18,8" stroke="currentColor" fill="currentColor"/>
-                                <line x1="6.6" y1="6" x2="6.6" y2="18" stroke="currentColor" stroke-width="3"/>
-                            </svg>      
-                        </span>
-                        <span id="play" class="button disabled">
-                            <svg class="icon play" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="11" stroke="currentColor"/>
-                                <polygon points="9.6,16 16,12 9.6,8" stroke="currentColor" fill="currentColor"/>
-                            </svg>
-                        </span>
-                        <span id="stop" class="button disabled">
-                            <svg class="icon stop"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="11" stroke="currentColor"/>
-                                <line x1="9"  y1="8" x2="9" y2="16" stroke="currentColor" stroke-width="3"/>
-                                <line x1="15" y1="8" x2="15" y2="16" stroke="currentColor" stroke-width="3"/>
-                            </svg>
-                        </span>
-                        <span id="next" class="button disabled">
-                            <svg class="icon next" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="6.6,16 13,12 6.6,8" stroke="currentColor" fill="currentColor"/>
-                                <line x1="18" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="3"/>
-                            </svg>                     
-                        </span>                    
-                    </div>
+                        <div class="form-row">
+                            <span id="prev" class="button disabled">
+                                <svg class="icon prev"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="18,16 11.6,12 18,8" stroke="currentColor" fill="currentColor"/>
+                                    <line x1="6.6" y1="6" x2="6.6" y2="18" stroke="currentColor" stroke-width="3"/>
+                                </svg>      
+                            </span>
+                            <span id="play" class="button disabled">
+                                <svg class="icon play" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="11" stroke="currentColor"/>
+                                    <polygon points="9.6,16 16,12 9.6,8" stroke="currentColor" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            <span id="stop" class="button disabled">
+                                <svg class="icon stop"  xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="11" stroke="currentColor"/>
+                                    <line x1="9"  y1="8" x2="9" y2="16" stroke="currentColor" stroke-width="3"/>
+                                    <line x1="15" y1="8" x2="15" y2="16" stroke="currentColor" stroke-width="3"/>
+                                </svg>
+                            </span>
+                            <span id="next" class="button disabled">
+                                <svg class="icon next" xmlns="http://www.w3.org/2000/svg" height="1em" width="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="6.6,16 13,12 6.6,8" stroke="currentColor" fill="currentColor"/>
+                                    <line x1="18" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="3"/>
+                                </svg>                     
+                            </span>
+                        </div>
+                        <div class="form-row">
+                            <input id="volume" disabled type="range" min="0" max="100" value="0" step="1">                  
+                        </div>
+                    </div>    
                 </div>
             `;
 

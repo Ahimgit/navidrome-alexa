@@ -170,9 +170,8 @@ There is severe lack of tests currently.
 - Better/more secure way of setting configuration params
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
-- Volume controls
 - Proper signature validation of incoming /skill requests
 - Per-device queue / state
 - More control over logging configuration
-- More (than zero) tests
-- Voice commands are likley out of scope (althrough stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)
+- More tests
+- Voice commands are likely out of scope (although stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)
