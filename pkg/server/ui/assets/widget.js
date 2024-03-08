@@ -407,7 +407,7 @@ naWidgetModule = (function () {
         }
 
         #convertVolumeToSliderValue(volume) {
-            return Math.sqrt(volume.volume / 100) * 100;
+            return Math.sqrt(volume / 100) * 100;
         }
 
         async #getCurrentVolume() {
