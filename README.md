@@ -63,19 +63,20 @@ and /api endpoint to control queuing and playback.
 - 2.1. Download a pre-built [release of navidrome-alexa](https://github.com/Ahimgit/navidrome-alexa/releases) or build locally.
 - 2.2. Run it passing configuration parameters below:
 
-| Command line         | Env var | Default value | Description                                                                                          |
-|----------------------|---------|---------------|------------------------------------------------------------------------------------------------------|
-| amazonDomain         |         | amazon.com    | Base domain to use for Alexa API calls.                                                              |
-| amazonCookiePath     |         | cookies.data  | Path to a writable file to store auth cookies.                                                       |   
-| amazonUser           |         | _Empty_       | Amazon account email with Alexa devices, can be left blank if auth cookies already exist.            | 
-| amazonPassword       |         | _Empty_       | Amazon account password, can be left blank if auth cookies already exist.                            | 
-| apiKey               |         | _Empty_       | Required. API key to authenticate /client calls. User provided, select arbitrary string to match 4.1 |         
-| streamDomain         |         | _Empty_       | Required. Navidrome public server domain URL.                                                        |         
-| alexaSkillId         |         | _Empty_       | Required. Skill id to authenticate calls from Alexa. Has to match copied in 1.11.                    |     
-| alexaSkillName       |         | navi stream   | Skill invocation name. Has to match name configured in 1.7. JSON                                     |                           
-| listenAddress        |         | :8080         | Listen address.                                                                                      |                                  
-| logIncomingRequests  |         | false         | Log API and Skill requests/responses.                                                                |            
-| logOutgoingRequests  |         | false         | Log outgoing (to Alexa APIs) requests/responses. **Will leak sensitive data into logs.**             | 
+| Command line        | Env Var                  | Default value | Description                                                                                          |
+|---------------------|--------------------------|---------------|------------------------------------------------------------------------------------------------------|
+| amazonDomain        | NA_AMAZON_DOMAIN         | amazon.com    | Base domain to use for Alexa API calls.                                                              |
+| amazonCookiePath    | NA_AMAZON_USER           | cookies.data  | Path to a writable file to store auth cookies.                                                       |   
+| amazonUser          | NA_AMAZON_PASSWORD       | _Empty_       | Amazon account email with Alexa devices, can be left blank if auth cookies already exist.            | 
+| amazonPassword      | NA_AMAZON_COOKIE_PATH    | _Empty_       | Amazon account password, can be left blank if auth cookies already exist.                            | 
+| apiKey              | NA_ALEXA_SKILL_ID        | _Empty_       | Required. API key to authenticate /client calls. User provided, select arbitrary string to match 4.1 |         
+| streamDomain        | NA_ALEXA_SKILL_NAME      | _Empty_       | Required. Navidrome public server domain URL.                                                        |         
+| alexaSkillId        | NA_STREAM_DOMAIN         | _Empty_       | Required. Skill id to authenticate calls from Alexa. Has to match copied in 1.11.                    |     
+| alexaSkillName      | NA_API_KEY               | navi stream   | Skill invocation name. Has to match name configured in 1.7. JSON                                     |                           
+| listenAddress       | NA_LISTEN_ADDRESS        | :8080         | Listen address.                                                                                      |                                  
+| logIncomingRequests | NA_LOG_INCOMING_REQUESTS | false         | Log API and Skill requests/responses.                                                                |            
+| logOutgoingRequests | NA_LOG_OUTGOING_REQUESTS | false         | Log outgoing (to Alexa APIs) requests/responses. **Will leak sensitive data into logs.**             | 
+| logStructured       | NA_LOG_STRUCTURED        | false         | Structured (JSON) logs output                                                                        | 
 
 Minimal configuration via command line example:
 
@@ -163,15 +164,13 @@ go test ./...
 There is severe lack of tests currently.
 
 ## Known issues & todo
-- No re-authentication in Alexa client, if cookie token is revoked for some reason `cookies.data` needs to be deleted (
-  although they have 1 year expiry)
+- No re-authentication in Alexa client, if cookie token is revoked for some reason `cookies.data` needs to be deleted manually (although they have 1 year expiry)
 - Authentication may be tricky and may require authing from a mobile app on the same network first to do CAPTCHA. 
-- Tests Alexa supported formats and if transcoding works/fixes issues, document it
-- Better/more secure way of setting configuration params
+- More tests
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
-- Proper signature validation of incoming /skill requests
 - Per-device queue / state
 - More control over logging configuration
-- More tests
+- Test Alexa supported formats and if transcoding works/fixes issues, document it
+- Proper signature validation of incoming /skill requests
 - Voice commands are likely out of scope (although stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)

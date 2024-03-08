@@ -27,6 +27,7 @@ type Config struct {
 	ListenAddress       string
 	LogIncomingRequests bool
 	LogOutgoingRequests bool
+	LogStructured       bool
 }
 
 func StartRouter(config *Config) {
