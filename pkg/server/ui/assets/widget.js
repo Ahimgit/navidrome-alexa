@@ -365,6 +365,8 @@ naWidgetModule = (function () {
                         this.#pubSub.publishStatusUpdated(playing.song.name, `${playing.song.album} - ${playing.song.artist}`, 'normal');
                     } else if (playing.song) {
                         this.#pubSub.publishStatusUpdated(playing.song && playing.song.name || '', 'Stopped', 'normal');
+                    } else {
+                        this.#pubSub.publishStatusUpdated('Ready', `To play on ${this.#settingsAPI.getDweviceSelected().name}`, 'normal');
                     }
                 }
             }, 1500);
@@ -449,7 +451,7 @@ naWidgetModule = (function () {
                 this.#prevButtonElement.classList.remove('disabled');
                 this.#nextButtonElement.classList.remove('disabled');
                 this.#volumeSliderElement.disabled = false;
-                this.#pubSub.publishStatusUpdated('Ready', `To play on ${this.#settingsAPI.getDeviceSelected().name}`, 'error');
+                this.#pubSub.publishStatusUpdated('Ready', `To play on ${this.#settingsAPI.getDeviceSelected().name}`, 'normal');
             } else {
                 this.#playButtonElement.classList.add('disabled');
                 this.#stopButtonElement.classList.add('disabled');

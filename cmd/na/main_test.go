@@ -12,6 +12,7 @@ var mutexEnv sync.Mutex
 var mutexArg sync.Mutex
 
 func TestParseConfiguration(t *testing.T) {
+
 	t.Run("parse basic env config with defaults ", func(t *testing.T) {
 		withArgs([]string{"command"}, func() {
 			withEnv(map[string]string{
@@ -138,6 +139,7 @@ func TestParseConfiguration(t *testing.T) {
 }
 
 func TestGetStrPrecedence(t *testing.T) {
+
 	t.Run("flag value should take precedence over default and env", func(t *testing.T) {
 		var value string
 		withEnv(map[string]string{"NA_VAR_TEST1": "valueFromEnv1"}, func() {
@@ -180,6 +182,7 @@ func TestGetStrPrecedence(t *testing.T) {
 }
 
 func TestGetBoolPrecedence(t *testing.T) {
+
 	t.Run("flag value should take precedence over default and env", func(t *testing.T) {
 		var value bool
 		withEnv(map[string]string{"NA_VAR_TEST1": "true"}, func() {

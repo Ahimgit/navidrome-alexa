@@ -11,6 +11,7 @@ import (
 )
 
 func TestCookieHelper(t *testing.T) {
+
 	t.Run("CookiesSaved", func(t *testing.T) {
 		t.Run("the cookie file does not exist", func(t *testing.T) {
 			cookieHelper := NewCookieHelper("does not exist")
@@ -56,6 +57,47 @@ func TestCookieHelper(t *testing.T) {
 		assert.Equal(t, "test2", cookies[1].Name)
 		assert.Equal(t, "value2", cookies[1].Value)
 	})
+}
+
+func TestExtractCSRF(t *testing.T) {
+
+	t.Run("Extract existing csrf cookie", func(t *testing.T) {
+		baseDomain := "example.com"
+		expectedCSRF := "csrf_token_value"
+		cookieDomain := &url.URL{Scheme: "https", Host: "alexa." + baseDomain, Path: "/"}
+		jar, _ := cookiejar.New(nil)
+		jar.SetCookies(cookieDomain, []*http.Cookie{{Name: "csrf", Value: expectedCSRF}})
+
+		actualCSRF := NewCookieHelper("unused").ExtractCSRF(jar, baseDomain)
+
+		assert.Equal(t, expectedCSRF, actualCSRF)
+	})
+
+	t.Run("Extract empty csrf cookie", func(t *testing.T) {
+		baseDomain := "example.com"
+		emptyJar, _ := cookiejar.New(nil)
+
+		actualCSRF := NewCookieHelper("unused").ExtractCSRF(emptyJar, baseDomain)
+
+		assert.Empty(t, actualCSRF)
+	})
+
+}
+
+func TestExtractLoginFormInputsCSRF(t *testing.T) {
+	formHtml := `
+		<form>
+			<input type="hidden" name="formInput1" value="val1">
+			<input type="text" name="username">
+			<input type="hidden" name="formInput2" value="val2">
+			<input type="text" name="password">
+		</form>`
+
+	formData := NewCookieHelper("unused").ExtractLoginFormInputsCSRF(formHtml)
+
+	assert.NotNil(t, formData, "Extracted form data should not be nil")
+	assert.Equal(t, "val1", formData.Get("formInput1"))
+	assert.Equal(t, "val2", formData.Get("formInput2"))
 }
 
 func createTempFile(t *testing.T) *os.File {

@@ -161,7 +161,6 @@ You can also use provided build script to run static checks, tests and build.
 ```shell
 go test ./...    
 ```
-There is severe lack of tests currently.
 
 ## Known issues & todo
 - No re-authentication in Alexa client, if cookie token is revoked for some reason `cookies.data` needs to be deleted manually (although they have 1 year expiry)

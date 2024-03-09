@@ -10,13 +10,20 @@ type Song struct {
 	Stream   string `json:"stream"`
 }
 
+type queueState string
+
+const (
+	QueueStatePlaying queueState = "PLAYING"
+	QueueStateIdle    queueState = "IDLE"
+)
+
 type Queue struct {
-	State         string `json:"state"`
-	QueuePosition int    `json:"queuePosition"`
-	TrackPosition int    `json:"trackPosition"`
-	Songs         []Song `json:"queue"`
-	Shuffle       bool   `json:"shuffle"`
-	Repeat        bool   `json:"repeat"`
+	State         queueState `json:"state"`
+	QueuePosition int        `json:"queuePosition"`
+	TrackPosition int        `json:"trackPosition"`
+	Songs         []Song     `json:"queue"`
+	Shuffle       bool       `json:"shuffle"`
+	Repeat        bool       `json:"repeat"`
 }
 
 func NewQueue() *Queue {

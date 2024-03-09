@@ -33,7 +33,7 @@ func (api *QueueAPI) GetNowPlaying(c *gin.Context) {
 			"song":  api.Queue.Current(),
 		})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"state": "IDLE"})
+		c.JSON(http.StatusOK, gin.H{"state": model.QueueStateIdle})
 	}
 }
 

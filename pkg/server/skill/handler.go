@@ -58,7 +58,7 @@ func (handlerSelector *HandlerSelector) HandleRequest(rqe *request.RequestEnvelo
 
 func (handlerSelector *HandlerSelector) handlePlaybackStarted(c context.Context) (rs *response.ResponseEnvelope) {
 	if handlerSelector.Queue.HasItems() {
-		handlerSelector.Queue.State = "PLAYING"
+		handlerSelector.Queue.State = model.QueueStatePlaying
 		log.GetContextLogger(c).Info("|> playback started",
 			"id", handlerSelector.Queue.Current().Id,
 			"name", handlerSelector.Queue.Current().Name)
@@ -79,7 +79,7 @@ func (handlerSelector *HandlerSelector) handlePlaybackFinishedAdvanceQueue(rq *r
 				"id", handlerSelector.Queue.Current().Id)
 		}
 	} else {
-		handlerSelector.Queue.State = "IDLE"
+		handlerSelector.Queue.State = model.QueueStateIdle
 		log.GetContextLogger(c).Info("|| playback finished, no more items in the queue")
 	}
 	return handlerSelector.handleDefaultResponse()
@@ -115,23 +115,33 @@ func (handlerSelector *HandlerSelector) handlePlaybackNearlyFinishedEnqueue(rq *
 func (handlerSelector *HandlerSelector) handlePlaybackStopped(rq *request.AudioPlayerPlaybackStoppedRequest, c context.Context) (rs *response.ResponseEnvelope) {
 	if handlerSelector.Queue.HasItems() && handlerSelector.Queue.Current().Id == rq.Token {
 		handlerSelector.Queue.TrackPosition = rq.OffsetInMilliseconds // save position
-		handlerSelector.Queue.State = "IDLE"
 		log.GetContextLogger(c).Info("|| stopped",
 			"id", handlerSelector.Queue.Current().Id,
 			"name", handlerSelector.Queue.Current().Name,
 			"time_offset", rq.OffsetInMilliseconds)
+	} else {
+		handlerSelector.Queue.TrackPosition = 0
+		log.GetContextLogger(c).Info("|| stopped something not current", "amz_id", rq.Token)
 	}
+	handlerSelector.Queue.State = model.QueueStateIdle
 	return handlerSelector.handleDefaultResponse()
 }
 
 func (handlerSelector *HandlerSelector) handlePlaybackFailed(rq *request.AudioPlayerPlaybackFailedRequest, c context.Context) (rs *response.ResponseEnvelope) {
 	if handlerSelector.Queue.HasItems() {
-		log.GetContextLogger(c).Info("X playback failed",
+		log.GetContextLogger(c).Warn("X playback failed",
 			"amz_id", rq.CurrentPlaybackState.Token,
 			"id", handlerSelector.Queue.Current().Id,
-			"name", handlerSelector.Queue.Current().Name)
+			"name", handlerSelector.Queue.Current().Name,
+			"errorType", rq.Error.Type,
+			"errorMessage", rq.Error.Message,
+		)
 	} else {
-		log.GetContextLogger(c).Info("X playback failed, queue is empty", "id_amz", rq.CurrentPlaybackState.Token)
+		log.GetContextLogger(c).Info("X playback failed, queue is empty",
+			"id_amz", rq.CurrentPlaybackState.Token,
+			"errorType", rq.Error.Type,
+			"errorMessage", rq.Error.Message,
+		)
 	}
 	return handlerSelector.handleNextIntent(c) // try next one
 }
