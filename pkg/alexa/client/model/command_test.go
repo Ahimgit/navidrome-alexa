@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -29,7 +28,7 @@ func TestCommandBuilders(t *testing.T) {
 		assert.NotNil(t, cmd)
 		assert.Equal(t, "PREVIEW", cmd.BehaviorID)
 		assert.Equal(t, "ENABLED", cmd.Status)
-		assertSequenceEqual(t, expectedSequence, cmd.SequenceJSON)
+		assert.JSONEq(t, expectedSequence, cmd.SequenceJSON)
 	})
 
 	t.Run("Test TextCommand builder", func(t *testing.T) {
@@ -54,7 +53,7 @@ func TestCommandBuilders(t *testing.T) {
 		assert.NotNil(t, cmd)
 		assert.Equal(t, "PREVIEW", cmd.BehaviorID)
 		assert.Equal(t, "ENABLED", cmd.Status)
-		assertSequenceEqual(t, expectedSequence, cmd.SequenceJSON)
+		assert.JSONEq(t, expectedSequence, cmd.SequenceJSON)
 	})
 
 	t.Run("Test VolumeCmd builder", func(t *testing.T) {
@@ -78,17 +77,7 @@ func TestCommandBuilders(t *testing.T) {
 		assert.NotNil(t, cmd)
 		assert.Equal(t, "PREVIEW", cmd.BehaviorID)
 		assert.Equal(t, "ENABLED", cmd.Status)
-		assertSequenceEqual(t, expectedSequence, cmd.SequenceJSON)
+		assert.JSONEq(t, expectedSequence, cmd.SequenceJSON)
 	})
 
-}
-
-func assertSequenceEqual(t *testing.T, expected string, actual string) {
-	var expectedStruct Sequence
-	var actualStruct Sequence
-	err := json.Unmarshal([]byte(expected), &expectedStruct)
-	assert.NoError(t, err)
-	err = json.Unmarshal([]byte(actual), &actualStruct)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedStruct, actualStruct)
 }

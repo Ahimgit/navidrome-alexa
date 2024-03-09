@@ -173,3 +173,4 @@ go test ./...
 - Test Alexa supported formats and if transcoding works/fixes issues, document it
 - Proper signature validation of incoming /skill requests
 - Voice commands are likely out of scope (although stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)
+- Multiroom playback, while it does not work with skills out of the box there are potential workarounds to explore  

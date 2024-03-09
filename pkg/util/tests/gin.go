@@ -21,6 +21,10 @@ func MockJSONPost(body string) *http.Request {
 	return httptest.NewRequest("POST", "/", strings.NewReader(body))
 }
 
+func MockJSONGet(url string) *http.Request {
+	return httptest.NewRequest("GET", url, nil)
+}
+
 func MockGin(request *http.Request) (*gin.Context, *httptest.ResponseRecorder) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()

@@ -13,6 +13,7 @@ import (
 )
 
 func TestAlexaClientLogIn(t *testing.T) {
+
 	t.Run("LogIn with no saved cookies, happy path", func(t *testing.T) {
 		mockHttpClient, mockCookieHelper, alexaClient := initClient()
 		cookieJar := new(MockCookieJar)
