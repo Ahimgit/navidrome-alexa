@@ -401,15 +401,12 @@ naWidgetModule = (function () {
             this.#volumeSliderElement = widget.getElement('volume');
         }
 
-        #convertSliderToVolume(value) {
-            let volume = value / 100;
-            volume = Math.pow(volume, 2);
-            volume = Math.ceil(volume * 100);
-            return volume;
+        #convertSliderToVolume(slider) {
+            return Math.ceil(Math.pow(slider, 2) / 100);
         }
 
         #convertVolumeToSliderValue(volume) {
-            return Math.sqrt(volume / 100) * 100;
+            return Math.round(Math.sqrt(volume) * 10);
         }
 
         async #getCurrentVolume() {
