@@ -143,6 +143,146 @@ func TestPostPlayerVolumeCommand(t *testing.T) {
 	})
 }
 
+func TestPlayerAPIGetVolume(t *testing.T) {
+
+	t.Run("GetVolume", func(t *testing.T) {
+		rs := `{"volumes": [
+			{"deviceSerialNumber": "dsn1", "muted": false, "volume": 11},
+			{"deviceSerialNumber": "dsn2", "muted": true, "volume": 22}
+		]}`
+
+		mockGinContext, responseRecorder := tests.MockGin(tests.MockJSONGet("/"))
+		mockAlexaClient := new(MockAlexaClient)
+		mockAlexaClient.On("GetVolume").Return(volume(), noError())
+
+		playerAPI := NewPlayerAPI(mockAlexaClient, "skill name")
+		playerAPI.GetVolume(mockGinContext)
+
+		assert.JSONEq(t, rs, responseRecorder.Body.String())
+		assert.Equal(t, 200, responseRecorder.Code)
+		mockAlexaClient.AssertExpectations(t)
+	})
+
+	t.Run("GetVolume, client error", func(t *testing.T) {
+		rs := `{"message":"mock error", "status":"error"}`
+
+		mockGinContext, responseRecorder := tests.MockGin(tests.MockJSONGet("/"))
+		mockAlexaClient := new(MockAlexaClient)
+		mockAlexaClient.On("GetVolume").Return(volume(), errors.New("mock error"))
+
+		playerAPI := NewPlayerAPI(mockAlexaClient, "skill name")
+		playerAPI.GetVolume(mockGinContext)
+
+		assert.JSONEq(t, rs, responseRecorder.Body.String())
+		assert.Equal(t, 500, responseRecorder.Code)
+		mockAlexaClient.AssertExpectations(t)
+	})
+}
+
+func TestPlayerAPIGetDevices(t *testing.T) {
+
+	t.Run("GetDevices", func(t *testing.T) {
+		rs := `{"devices":[{"name":"an3","deviceOwnerCustomerId":"cid3","deviceType":"dt3","serialNumber":"sn3"}]}`
+
+		mockGinContext, responseRecorder := tests.MockGin(tests.MockJSONGet("/"))
+		mockAlexaClient := new(MockAlexaClient)
+		mockAlexaClient.On("GetDevices").Return(devices(), noError())
+
+		playerAPI := NewPlayerAPI(mockAlexaClient, "skill name")
+		playerAPI.GetDevices(mockGinContext)
+
+		assert.JSONEq(t, rs, responseRecorder.Body.String())
+		assert.Equal(t, 200, responseRecorder.Code)
+		mockAlexaClient.AssertExpectations(t)
+	})
+
+	t.Run("GetDevices, no devices error", func(t *testing.T) {
+		rs := `{"message":"No devices on the account", "status":"error"}`
+
+		mockGinContext, responseRecorder := tests.MockGin(tests.MockJSONGet("/"))
+		mockAlexaClient := new(MockAlexaClient)
+		mockAlexaClient.On("GetDevices").Return(model.DevicesResponse{}, noError())
+
+		playerAPI := NewPlayerAPI(mockAlexaClient, "skill name")
+		playerAPI.GetDevices(mockGinContext)
+
+		assert.JSONEq(t, rs, responseRecorder.Body.String())
+		assert.Equal(t, 404, responseRecorder.Code)
+		mockAlexaClient.AssertExpectations(t)
+	})
+
+	t.Run("GetDevices, client error", func(t *testing.T) {
+		rs := `{"message":"mock error", "status":"error"}`
+
+		mockGinContext, responseRecorder := tests.MockGin(tests.MockJSONGet("/"))
+		mockAlexaClient := new(MockAlexaClient)
+		mockAlexaClient.On("GetDevices").Return(devices(), errors.New("mock error"))
+
+		playerAPI := NewPlayerAPI(mockAlexaClient, "skill name")
+		playerAPI.GetDevices(mockGinContext)
+
+		assert.JSONEq(t, rs, responseRecorder.Body.String())
+		assert.Equal(t, 500, responseRecorder.Code)
+		mockAlexaClient.AssertExpectations(t)
+	})
+}
+
+func noError() error {
+	return nil
+}
+
+func volume() model.VolumeResponse {
+	return model.VolumeResponse{
+		Volumes: []model.Volume{
+			{
+				DeviceType:    "dt1",
+				Dsn:           "dsn1",
+				SpeakerVolume: 11,
+			},
+			{
+				DeviceType:    "dt1",
+				Dsn:           "dsn2",
+				SpeakerVolume: 22,
+				SpeakerMuted:  true,
+			},
+		},
+	}
+}
+
+func devices() model.DevicesResponse {
+	return model.DevicesResponse{
+		Devices: []model.Device{
+			{
+				AccountName:           "an1",
+				Capabilities:          []string{"ANYTHING", "ANYTHING"},
+				DeviceAccountId:       "dai1",
+				DeviceFamily:          "df1",
+				DeviceOwnerCustomerId: "cid1",
+				DeviceType:            "dt1",
+				SerialNumber:          "sn1",
+			},
+			{
+				AccountName:           "an2",
+				Capabilities:          []string{"AUDIO_PLAYER"},
+				DeviceAccountId:       "dai2",
+				DeviceFamily:          "WHA",
+				DeviceOwnerCustomerId: "cid2",
+				DeviceType:            "dt2",
+				SerialNumber:          "sn2",
+			},
+			{
+				AccountName:           "an3",
+				Capabilities:          []string{"ANYTHING", "AUDIO_PLAYER"},
+				DeviceAccountId:       "dai3",
+				DeviceFamily:          "df3",
+				DeviceOwnerCustomerId: "cid3",
+				DeviceType:            "dt3",
+				SerialNumber:          "sn3",
+			},
+		},
+	}
+}
+
 type MockAlexaClient struct {
 	mock.Mock
 }
@@ -169,8 +309,4 @@ func (m *MockAlexaClient) GetVolume() (devices model.VolumeResponse, err error) 
 	ret1 := args.Get(0)
 	ret2 := args.Error(1)
 	return ret1.(model.VolumeResponse), ret2
-}
-
-func noError() error {
-	return nil
 }
