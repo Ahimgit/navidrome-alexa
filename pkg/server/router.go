@@ -85,7 +85,7 @@ func initAlexaClient(amazonDomain string, amazonUser string, amazonPassword stri
 	} else {
 		client = alexa.NewAlexaClient(amazonDomain, amazonUser, amazonPassword, amazonCookiePath)
 	}
-	if err := client.LogIn(); err != nil {
+	if err := client.LogIn(false); err != nil {
 		log.Logger().Error("Unable to log in to Alexa account", err)
 	}
 	return client

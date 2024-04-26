@@ -287,8 +287,8 @@ type MockAlexaClient struct {
 	mock.Mock
 }
 
-func (m *MockAlexaClient) LogIn() (err error) {
-	args := m.Called()
+func (m *MockAlexaClient) LogIn(relog bool) (err error) {
+	args := m.Called(relog)
 	return args.Error(1)
 }
 

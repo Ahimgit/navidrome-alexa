@@ -3,11 +3,11 @@ package httpclient
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -30,6 +30,7 @@ type IHttpClient interface {
 	SimpleGET(url string, rqHeaders *Headers) (rs *Response, err error)
 	SimplePOST(url string, rqHeaders *Headers, formData *url.Values) (rs *Response, err error)
 	GetCookieJar() (jar http.CookieJar)
+	ResetCookieJar()
 }
 
 type HttpClient struct {
@@ -39,20 +40,23 @@ type HttpClient struct {
 }
 
 func NewHttpClient() *HttpClient {
-	jar, _ := cookiejar.New(nil)
 	client := &HttpClient{
-		requestLogger: func(rq *http.Request, rqBody []byte) {},
-		responseLogger: func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {
-		},
+		requestLogger:  func(rq *http.Request, rqBody []byte) {},
+		responseLogger: func(rq *http.Request, rqBody []byte, rs *http.Response, rsBody []byte, err error, start time.Time) {},
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
-			Jar:     jar,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 		},
 	}
+	client.ResetCookieJar()
 	return client
+}
+
+func (httpClient *HttpClient) ResetCookieJar() {
+	jar, _ := cookiejar.New(nil)
+	httpClient.Client.Jar = jar
 }
 
 func (httpClient *HttpClient) WithTimeout(duration time.Duration) *HttpClient {
@@ -79,7 +83,7 @@ func (httpClient *HttpClient) RestGET(url string, rqHeaders *Headers, rs any) (e
 		return nil // not expecting rs, don't unmarshal
 	}
 	if err = json.Unmarshal(rsBytes, rs); err != nil {
-		return errors.Wrapf(err, "error unmarshalling rs: %s", string(rsBytes))
+		return NewHttpError("error unmarshalling rs: "+string(rsBytes), err)
 	}
 	return nil
 }
@@ -87,7 +91,7 @@ func (httpClient *HttpClient) RestGET(url string, rqHeaders *Headers, rs any) (e
 func (httpClient *HttpClient) RestPOST(url string, rqHeaders *Headers, rq any, rs any) (err error) {
 	rqBytes, err := json.Marshal(rq)
 	if err != nil {
-		return errors.Wrap(err, "error marshalling rq")
+		return NewHttpError("error marshalling rq", err)
 	}
 	rsBytes, _, err := httpClient.runHttpRequest("POST", url, rqHeaders, rqBytes)
 	if err != nil {
@@ -97,7 +101,7 @@ func (httpClient *HttpClient) RestPOST(url string, rqHeaders *Headers, rq any, r
 		return nil // not expecting rs, don't unmarshal
 	}
 	if err = json.Unmarshal(rsBytes, rs); err != nil {
-		return errors.Wrapf(err, "error unmarshalling rs: %s", string(rsBytes))
+		return NewHttpError("error unmarshalling rs: "+string(rsBytes), err)
 	}
 	return nil
 }
@@ -144,29 +148,30 @@ func (httpClient *HttpClient) runHttpRequest(
 		rq, err = http.NewRequest(rqMethod, rqURL, bytes.NewBuffer(rqBody))
 	}
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error creating http request")
+		return nil, nil, NewHttpError("error creating http request", err)
 	}
 	if rqHeaders != nil {
 		for _, header := range *rqHeaders {
 			rq.Header.Set(header.Key, header.Value)
 		}
 	}
+
 	httpClient.requestLogger(rq, rqBody)
 	rs, err = httpClient.Client.Do(rq)
 	if err != nil {
-		err = errors.Wrap(err, "error posting")
+		err = NewHttpError("error doing http call", err)
 		httpClient.responseLogger(rq, rqBody, nil, nil, err, startTime)
 		return nil, nil, err
 	}
 	if rs.StatusCode >= 400 {
-		err = errors.Errorf("error posting status: %d, %s", rs.StatusCode, rs.Status)
+		err = NewHttpErrorWithStatus("error status code "+strconv.Itoa(rs.StatusCode), rs.Status, rs.StatusCode)
 		httpClient.responseLogger(rq, rqBody, rs, nil, nil, startTime) // err not propagated
 		return nil, rs, err
 	}
 	rsBody, err = io.ReadAll(rs.Body)
 	defer nopClose(rs.Body)
 	if err != nil {
-		err = errors.Wrap(err, "error reading response body")
+		err = NewHttpErrorWithStatus("error reading response body", rs.Status, rs.StatusCode)
 		httpClient.responseLogger(rq, rqBody, rs, rsBody, err, startTime)
 		return nil, rs, err
 	}

@@ -14,7 +14,7 @@ func main() {
 		os.Exit(1)
 	}
 	alexaClient := client.NewAlexaClient(os.Args[1], os.Args[2], os.Args[3], "cookies.data")
-	err := alexaClient.LogIn()
+	err := alexaClient.LogIn(false)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

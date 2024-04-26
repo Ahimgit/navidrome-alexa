@@ -16,7 +16,7 @@ const (
 )
 
 type IAlexaClient interface {
-	LogIn() (err error)
+	LogIn(relog bool) (err error)
 	PostSequenceCmd(command model.AlexaCmd) (err error)
 	GetDevices() (devices model.DevicesResponse, err error)
 	GetVolume() (devices model.VolumeResponse, err error)
@@ -29,6 +29,8 @@ type AlexaClient struct {
 	user         string
 	password     string
 	csrf         string
+	retries      int
+	retriesMax   int
 }
 
 func NewAlexaClient(baseDomain string, user string, password string, cookieFile string) IAlexaClient {
@@ -38,6 +40,7 @@ func NewAlexaClient(baseDomain string, user string, password string, cookieFile 
 		baseDomain:   baseDomain,
 		user:         user,
 		password:     password,
+		retriesMax:   1,
 	}
 }
 
@@ -49,11 +52,15 @@ func NewAlexaClientWithHttpClient(baseDomain string, user string, password strin
 		baseDomain:   baseDomain,
 		user:         user,
 		password:     password,
+		retriesMax:   1,
 	}
 }
 
-func (c *AlexaClient) LogIn() (err error) {
-	if !c.cookieHelper.CookiesSaved() {
+func (c *AlexaClient) LogIn(relog bool) (err error) {
+	if relog || !c.cookieHelper.CookiesSaved() {
+		if relog {
+			c.client.ResetCookieJar()
+		}
 		if c.user == "" || c.password == "" {
 			return errors.New("Alexa.LogIn no saved cookies, user and password are required but empty")
 		}
@@ -91,24 +98,30 @@ func (c *AlexaClient) LogIn() (err error) {
 }
 
 func (c *AlexaClient) PostSequenceCmd(command model.AlexaCmd) (err error) {
-	apiUrl := fmt.Sprintf("https://alexa.%s/api/behaviors/preview", c.baseDomain)
-	if err = c.client.RestPOST(apiUrl, buildAppHeaders(c.csrf), command, nil); err != nil {
+	if err = c.retry(func() error {
+		apiUrl := fmt.Sprintf("https://alexa.%s/api/behaviors/preview", c.baseDomain)
+		return c.client.RestPOST(apiUrl, buildAppHeaders(c.csrf), command, nil)
+	}); err != nil {
 		return errors.Wrap(err, "Alexa.PostSequenceCmd failed")
 	}
 	return nil
 }
 
 func (c *AlexaClient) GetDevices() (devices model.DevicesResponse, err error) {
-	apiUrl := fmt.Sprintf("https://alexa.%s/api/devices-v2/device?cached=false", c.baseDomain)
-	if err = c.client.RestGET(apiUrl, buildAppHeaders(c.csrf), &devices); err != nil {
+	if err = c.retry(func() error {
+		apiUrl := fmt.Sprintf("https://alexa.%s/api/devices-v2/device?cached=false", c.baseDomain)
+		return c.client.RestGET(apiUrl, buildAppHeaders(c.csrf), &devices)
+	}); err != nil {
 		return devices, errors.Wrap(err, "Alexa.GetDevices failed")
 	}
 	return devices, nil
 }
 
 func (c *AlexaClient) GetVolume() (volume model.VolumeResponse, err error) {
-	apiUrl := fmt.Sprintf("https://alexa.%s/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes", c.baseDomain)
-	if err = c.client.RestGET(apiUrl, buildAppHeaders(c.csrf), &volume); err != nil {
+	if err = c.retry(func() error {
+		apiUrl := fmt.Sprintf("https://alexa.%s/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes", c.baseDomain)
+		return c.client.RestGET(apiUrl, buildAppHeaders(c.csrf), &volume)
+	}); err != nil {
 		return volume, errors.Wrap(err, "Alexa.GetVolume failed")
 	}
 	return volume, nil
@@ -183,4 +196,18 @@ func buildWebViewHeaders(referer string) (headers *httpclient.Headers) {
 		headersCollection = append(headersCollection, httpclient.Header{Key: "Referer", Value: referer})
 	}
 	return &headersCollection
+}
+
+func (c *AlexaClient) retry(retryBlock func() error) error {
+	err := retryBlock()
+	for httpclient.IsAuthError(err) && c.retries < c.retriesMax { // while auth error and have retries
+		c.retries++
+		if err = c.LogIn(true); err == nil { // re-login and call again
+			err = retryBlock()
+		}
+	}
+	if err == nil {
+		c.retries = 0
+	}
+	return err
 }

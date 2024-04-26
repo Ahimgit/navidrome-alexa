@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"

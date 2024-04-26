@@ -1,8 +1,9 @@
 package httpclient
 
 import (
-	"errors"
+	"fmt"
 	"github.com/h2non/gock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -72,7 +73,7 @@ func TestSimpleGET(t *testing.T) {
 
 		assert.Nil(t, rs)
 		assert.Error(t, err)
-		assert.Equal(t, `error posting: Get "http://dummy/url?param=test3": mock error`, err.Error())
+		assert.Equal(t, `error doing http call: Get "http://dummy/url?param=test3": mock error`, err.Error())
 	})
 }
 
@@ -116,7 +117,7 @@ func TestSimplePOST(t *testing.T) {
 
 		assert.Nil(t, rs)
 		assert.Error(t, err)
-		assert.Equal(t, `error posting: Post "http://dummy/url?param=test2": mock error`, err.Error())
+		assert.Equal(t, `error doing http call: Post "http://dummy/url?param=test2": mock error`, err.Error())
 	})
 }
 
@@ -187,7 +188,14 @@ func TestRestGET(t *testing.T) {
 		}, &rs)
 
 		assert.Error(t, err)
-		assert.Equal(t, `error posting status: 400, 400 Bad Request`, err.Error())
+		assert.Equal(t, "error status code 400", err.Error())
+		var httpError *HttpError
+		if errors.As(err, &httpError) {
+			assert.Equal(t, 400, httpError.StatusCode)
+			assert.Equal(t, "400 Bad Request", httpError.Status)
+		} else {
+			assert.Fail(t, "Error isn't of type HttpError")
+		}
 	})
 }
 
@@ -278,7 +286,15 @@ func TestRestPOST(t *testing.T) {
 		}, rq, &rs)
 
 		assert.Error(t, err)
-		assert.Equal(t, `error posting status: 400, 400 Bad Request`, err.Error())
+		var httpError *HttpError
+		if errors.As(err, &httpError) {
+			fmt.Println(httpError.StatusCode)
+			assert.Equal(t, 400, httpError.StatusCode)
+			assert.Equal(t, "400 Bad Request", httpError.Status)
+		} else {
+			assert.Fail(t, "Error isn't of type HttpError")
+		}
+		assert.Equal(t, "error status code 400", err.Error())
 	})
 }
 
@@ -356,6 +372,6 @@ func TestRequestLogging(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Error(t, lastRsErr)
-		assert.Equal(t, `error posting: Post "http://dummy/url?param=test1": mock error`, lastRsErr.Error())
+		assert.Equal(t, `error doing http call: Post "http://dummy/url?param=test1": mock error`, lastRsErr.Error())
 	})
 }
