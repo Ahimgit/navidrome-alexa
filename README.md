@@ -163,14 +163,12 @@ go test ./...
 ```
 
 ## Known issues & todo
-- No re-authentication in Alexa client, if cookie token is revoked for some reason `cookies.data` needs to be deleted manually (although they have 1 year expiry)
 - Authentication may be tricky and may require authing from a mobile app on the same network first to do CAPTCHA. 
-- More tests
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
 - Per-device queue / state
 - More control over logging configuration
-- Test Alexa supported formats and if transcoding works/fixes issues, document it
-- Proper signature validation of incoming /skill requests
 - Voice commands are likely out of scope (although stop, resume, next, prev are supported if it already has a queue), also there is [asknavidrome](https://github.com/rosskouk/asknavidrome)
+- Proper signature validation of incoming /skill requests
+- Test Alexa supported formats and if transcoding works/fixes issues, document it
 - Multiroom playback, while it does not work with skills out of the box there are potential workarounds to explore  
