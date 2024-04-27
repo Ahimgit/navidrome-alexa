@@ -349,7 +349,50 @@ func TestAlexaClientAPIs(t *testing.T) {
 	})
 
 	t.Run("GetDevices, auth error retry succeeds", func(t *testing.T) {
+		mockHttpClient, mockCookieHelper, alexaClient := initClient()
+		cookieJar := new(MockCookieJar)
 
+		expectedInitialError := errors.Wrap(httpclient.NewHttpErrorWithStatus(
+			"mock auth error", "401 Unauthorized", 401), "mock wrap")
+		expectedResponse := model.DevicesResponse{Devices: []model.Device{{AccountName: "device1"}}}
+
+		expectedDomain := "example.com"
+		expectedFormBody := "mockformbody"
+		expectedFormGetResponse := &httpclient.Response{Body: expectedFormBody, Status: 200}
+		expectedFormData := &url.Values{"email": {"testUser"}, "password": {"testPassword"}}
+		expectedFormPostURL := "https://www.example.com/ap/signin"
+		expectedFormPostResponse := &httpclient.Response{Status: 302, Redirect: "https://www.example.com/maplanding"}
+		expectedDevicesCallURL := "https://alexa.example.com/api/devices-v2/device?cached=false"
+
+		// initial fail get devices with auth
+		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(expectedInitialError).Once()
+
+		// recover auth via re-login
+		mockHttpClient.On("ResetCookieJar").Return()
+		mockHttpClient.On("SimpleGET", expectedGetFormURL(), expectedGetFormHeaders()).Return(expectedFormGetResponse, noError())
+		mockCookieHelper.On("ExtractLoginFormInputsCSRF", expectedFormBody).Return(expectedFormData)
+		mockHttpClient.On("SimplePOST", expectedFormPostURL, expectedPostFormHeaders(), expectedFormData).Return(expectedFormPostResponse, noError())
+		mockHttpClient.On("RestGET", expectedDevicesCallURL, expectedHeaders(""), &model.DevicesResponse{}).Return(noError()) // get d for csrf token in login
+		mockHttpClient.On("GetCookieJar").Return(cookieJar)
+		mockCookieHelper.On("SaveCookies", cookieJar, expectedDomain).Return(noError())
+		mockCookieHelper.On("ExtractCSRF", cookieJar, expectedDomain).Return("csrfToken")
+
+		// recover get devices
+		mockHttpClient.
+			On("RestGET", expectedDevicesCallURL, expectedHeaders("csrfToken"), &model.DevicesResponse{}).
+			Run(func(args mock.Arguments) {
+				arg := args.Get(2).(*model.DevicesResponse)
+				*arg = expectedResponse
+			}).
+			Return(noError())
+
+		actualResponse, err := alexaClient.GetDevices()
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedResponse, actualResponse)
+
+		mockHttpClient.AssertExpectations(t)
+		mockCookieHelper.AssertExpectations(t)
 	})
 
 	t.Run("GetDevices, auth error retry failed", func(t *testing.T) {
