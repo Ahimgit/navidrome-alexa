@@ -108,17 +108,17 @@ and on the same host as Caddy (localhost).
   ```
 
 - 3.2 Add rewrite rule to inject widget into Navidrome's UI. Navidrome-alexa /proxy endpoint simply concats real navidrome UI js with the widget js.
-  Note that `main.6c7b5c7f.js` script name is Navidrome release [0.52.0](https://github.com/navidrome/navidrome/releases/tag/v0.52.0) specific and needs to be updated with each release.  
+  Note that `index-UCahLcOW.js` script name is Navidrome release [0.54.5](https://github.com/navidrome/navidrome/releases/tag/v0.54.5) specific and needs to be updated with each release.  
   ```
   navi.yourdomain.com {
     reverse_proxy localhost:4533
-    handle /app/static/js/main.6c7b5c7f.js {
-      rewrite * /proxy?proxied=http://localhost:4533/app/static/js/main.6c7b5c7f.js
+    handle /app/assets/index-UCahLcOW.js {
+      rewrite * /proxy?proxied=http://localhost:4533/app/assets/index-UCahLcOW.js
       reverse_proxy http://localhost:8080
     }
   }
   ```
-- 3.3. Verify that script now contains widget code with `curl -v http://navi.yourdomain.com/app/static/js/main.6c7b5c7f.js`
+- 3.3. Verify that script now contains widget code with `curl -v http://navi.yourdomain.com/app/assets/index-UCahLcOW.js`
  
 ### 4. Configure widget
 If widget was injected successfully when opening Navidrome UI, there will be a new button on the player bar.

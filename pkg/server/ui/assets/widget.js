@@ -1,4 +1,4 @@
-naWidgetModule = (function () {
+const naWidgetModule = (function () {
 
     class PubSub {
         #statusUpdatedListeners;
@@ -820,21 +820,25 @@ naWidgetModule = (function () {
     class Main {
         init() {
             customElements.define('na-widget', Widget);
-            document.addEventListener('DOMContentLoaded', () => {
-                const widget = new Widget();
-                document.body.appendChild(widget);
-                const settingsAPI = new SettingsLocalStorageAPI(localStorage);
-                const queueAPI = new QueueLocalStorageAPI(localStorage);
-                const playerAPI = new PlayerAPI(settingsAPI);
-                const pubSub = new PubSub();
-                const statusController = new StatusController(widget, settingsAPI, playerAPI, pubSub);
-                const settingsController = new SettingsController(widget, settingsAPI, playerAPI, pubSub);
-                const playerController = new PlayerController(widget, settingsAPI, playerAPI, queueAPI, pubSub);
-                const navi = new NavidromeUIIntegration(widget);
-                statusController.bindControls();
-                settingsController.bindControls();
-                playerController.bindControls();
-                navi.attachToNavidrome();
+            window.addEventListener('DOMContentLoaded', () => {
+                try {
+                    const widget = new Widget();
+                    document.body.appendChild(widget);
+                    const settingsAPI = new SettingsLocalStorageAPI(localStorage);
+                    const queueAPI = new QueueLocalStorageAPI(localStorage);
+                    const playerAPI = new PlayerAPI(settingsAPI);
+                    const pubSub = new PubSub();
+                    const statusController = new StatusController(widget, settingsAPI, playerAPI, pubSub);
+                    const settingsController = new SettingsController(widget, settingsAPI, playerAPI, pubSub);
+                    const playerController = new PlayerController(widget, settingsAPI, playerAPI, queueAPI, pubSub);
+                    const navi = new NavidromeUIIntegration(widget);
+                    statusController.bindControls();
+                    settingsController.bindControls();
+                    playerController.bindControls();
+                    navi.attachToNavidrome();
+                } catch (error) {
+                    console.log('naW', 'error attaching widget', error);
+                }
             });
         }
     }
