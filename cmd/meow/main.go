@@ -24,7 +24,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if devices.Devices == nil || len(devices.Devices) == 0 {
+	if len(devices.Devices) == 0 {
 		fmt.Println("No devices on the account")
 	}
 	for i, device := range devices.Devices {

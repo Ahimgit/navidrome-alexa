@@ -44,7 +44,7 @@ func (playerAPI *PlayerAPI) GetDevices(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
-	if devices.Devices == nil || len(devices.Devices) == 0 {
+	if len(devices.Devices) == 0 {
 		log.GetRequestContextLogger(c).Warn("GetDevices, no devices on the account")
 		c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "No devices on the account"})
 		return
