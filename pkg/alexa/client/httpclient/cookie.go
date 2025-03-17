@@ -14,13 +14,15 @@ type ICookieHelper interface {
 	SaveCookies(jar http.CookieJar, baseDomain string) (err error)
 	LoadCookies(jar http.CookieJar, baseDomain string) (err error)
 	ExtractCSRF(jar http.CookieJar, baseDomain string) (csrf string)
-	ExtractLoginFormInputsCSRF(formHtml string) (formData *url.Values)
+	ExtractLoginForm(pageHtml string) (formHtml string)
+	ExtractLoginFormInputs(formHtml string) (formData *url.Values)
 }
 
 type CookieHelper struct {
 	filePath string
 }
 
+var formExtractor = regexp.MustCompile(`(?s)<form[^>]+name="signIn"[^>]*>(.*?)</form>`)
 var formInputExtractor = regexp.MustCompile(`name="([^"]+)".*?value="([^"]+)"`)
 
 func NewCookieHelper(filePath string) ICookieHelper {
@@ -80,7 +82,16 @@ func (c *CookieHelper) ExtractCSRF(jar http.CookieJar, baseDomain string) (csrf 
 	return ""
 }
 
-func (c *CookieHelper) ExtractLoginFormInputsCSRF(formHtml string) (formData *url.Values) {
+func (c *CookieHelper) ExtractLoginForm(pageHtml string) (formHtml string) {
+	match := formExtractor.FindStringSubmatch(pageHtml)
+	if len(match) > 1 {
+		return match[0]
+	} else {
+		return ""
+	}
+}
+
+func (c *CookieHelper) ExtractLoginFormInputs(formHtml string) (formData *url.Values) {
 	formData = &url.Values{}
 	matches := formInputExtractor.FindAllStringSubmatch(formHtml, -1)
 	for _, match := range matches {

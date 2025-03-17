@@ -93,7 +93,7 @@ func TestExtractLoginFormInputsCSRF(t *testing.T) {
 			<input type="text" name="password">
 		</form>`
 
-	formData := NewCookieHelper("unused").ExtractLoginFormInputsCSRF(formHtml)
+	formData := NewCookieHelper("unused").ExtractLoginFormInputs(formHtml)
 
 	assert.NotNil(t, formData, "Extracted form data should not be nil")
 	assert.Equal(t, "val1", formData.Get("formInput1"))

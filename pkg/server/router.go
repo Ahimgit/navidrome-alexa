@@ -73,7 +73,7 @@ func StartRouter(config *Config) {
 	engine.StaticFS("/static", ui.NewEmbedFileSystem())
 
 	log.Logger().Info("Starting NA", "listenAddress", config.ListenAddress)
-	log.Logger().Error("Error starting server", engine.Run(config.ListenAddress))
+	log.Logger().Error("Error starting server", "error", engine.Run(config.ListenAddress))
 }
 
 func initAlexaClient(amazonDomain string, amazonUser string, amazonPassword string, amazonCookiePath string, logRequests bool) alexa.IAlexaClient {
@@ -86,7 +86,7 @@ func initAlexaClient(amazonDomain string, amazonUser string, amazonPassword stri
 		client = alexa.NewAlexaClient(amazonDomain, amazonUser, amazonPassword, amazonCookiePath)
 	}
 	if err := client.LogIn(false); err != nil {
-		log.Logger().Error("Unable to log in to Alexa account", err)
+		log.Logger().Error("Unable to log in to Alexa account", "error", err)
 	}
 	return client
 }

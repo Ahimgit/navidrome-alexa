@@ -64,18 +64,33 @@ func (c *AlexaClient) LogIn(relog bool) (err error) {
 		if c.user == "" || c.password == "" {
 			return errors.New("Alexa.LogIn no saved cookies, user and password are required but empty")
 		}
-		// get login form
-		formBody, referer, err := getLoginForm(c.baseDomain, c.client)
+
+		// step 0: get login form
+		pageHtmlFromStep0, referer, err := getLoginForm(c.baseDomain, c.client)
 		if err != nil {
 			return errors.Wrap(err, "Alexa.LogIn getting form failed")
 		}
-		// submit login form
-		formData := c.cookieHelper.ExtractLoginFormInputsCSRF(formBody)
-		formData.Add("email", c.user)
-		formData.Add("password", c.password)
-		if err = submitLoginForm(c.baseDomain, referer, formData, c.client); err != nil {
-			return errors.Wrap(err, "Alexa.LogIn submit form failed")
+
+		// step 1: submit login form with email w/o password
+		formHtmlFromStep0 := c.cookieHelper.ExtractLoginForm(pageHtmlFromStep0)
+		formDataForStep1 := c.cookieHelper.ExtractLoginFormInputs(formHtmlFromStep0)
+		formDataForStep1.Add("email", c.user)
+		formDataForStep1.Add("password", "")
+		pageHtmlFromStep1, err := submitLoginForm(c.baseDomain, referer, formDataForStep1, c.client)
+		if err != nil {
+			return errors.Wrap(err, "Alexa.LogIn submit step 1 login form failed")
 		}
+
+		// step 2: submit login form with (hidden input in real form) email and password
+		formHtmlFromStep1 := c.cookieHelper.ExtractLoginForm(pageHtmlFromStep1)
+		formDataForStep2 := c.cookieHelper.ExtractLoginFormInputs(formHtmlFromStep1)
+		formDataForStep2.Add("email", c.user)
+		formDataForStep2.Add("password", c.password)
+		_, err = submitLoginFormFinal(c.baseDomain, referer, formDataForStep2, c.client)
+		if err != nil {
+			return errors.Wrap(err, "Alexa.LogIn submit step 2 login form failed")
+		}
+
 		// get devices (sets csrf cookie) and save cookies
 		_, err = c.GetDevices()
 		if err != nil {
@@ -127,7 +142,7 @@ func (c *AlexaClient) GetVolume() (volume model.VolumeResponse, err error) {
 	return volume, nil
 }
 
-func getLoginForm(baseDomain string, client httpclient.IHttpClient) (formBody string, referer string, err error) {
+func getLoginForm(baseDomain string, client httpclient.IHttpClient) (pageHtml string, referer string, err error) {
 	formUrl := "https://www." + baseDomain + "/ap/signin" +
 		"?openid.pape.max_auth_age=0" +
 		"&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select" +
@@ -156,19 +171,31 @@ func getLoginForm(baseDomain string, client httpclient.IHttpClient) (formBody st
 	return response.Body, formUrl, nil
 }
 
-func submitLoginForm(baseDomain string, referer string, formData *url.Values, client httpclient.IHttpClient) (err error) {
+func submitLoginForm(baseDomain string, referer string, formData *url.Values, client httpclient.IHttpClient) (pageHtml string, err error) {
 	formUrl := fmt.Sprintf("https://www.%s/ap/signin", baseDomain)
 	response, err := client.SimplePOST(formUrl, buildWebViewHeaders(referer), formData)
 	if err != nil {
-		return errors.Wrap(err, "submit failed")
+		return "", errors.Wrap(err, "submit failed")
+	}
+	if response.Status != 200 {
+		return response.Body, errors.Errorf("submit failed, wrong status: %d, successful login submit should be a OK 200", response.Status)
+	}
+	return response.Body, nil
+}
+
+func submitLoginFormFinal(baseDomain string, referer string, formData *url.Values, client httpclient.IHttpClient) (pageHtml string, err error) {
+	formUrl := fmt.Sprintf("https://www.%s/ap/signin", baseDomain)
+	response, err := client.SimplePOST(formUrl, buildWebViewHeaders(referer), formData)
+	if err != nil {
+		return "", errors.Wrap(err, "submit failed")
 	}
 	if response.Status != 302 || response.Redirect == "" {
-		return errors.Errorf("submit failed, wrong status: %d, successful login submit should be a redirect", response.Status)
+		return response.Body, errors.Errorf("submit failed, wrong status: %d, successful login submit should be a redirect", response.Status)
 	}
 	if !strings.Contains(response.Redirect, "maplanding") {
-		return errors.Errorf("submit failed, try logining in from an app on the same network: %s", response.Redirect)
+		return "", errors.Errorf("submit failed, try logining in from an app on the same network: %s", response.Redirect)
 	}
-	return nil
+	return response.Body, nil
 }
 
 func buildAppHeaders(csrf string) (headers *httpclient.Headers) {
