@@ -84,7 +84,37 @@ func TestExtractCSRF(t *testing.T) {
 
 }
 
-func TestExtractLoginFormInputsCSRF(t *testing.T) {
+func TestExtractLoginForm(t *testing.T) {
+	pageHtml := `
+		<form name="signInWithPasskeyButton" method="post" action="" class="a-spacing-small">
+			<input type="hidden" name="formInput21" value="val21">
+			<input type="text" name="username2">
+			<input type="hidden" name="formInput22" value="val22">
+			<input type="text" name="password2">
+	    </form>
+		<form method="post" 
+		 name="signIn" novalidate action="https://www.amazon.com/ap/signin" 
+         class="auth-validate-form auth-clearable-form auth-validate-form">
+			<input type="hidden" name="formInput1" value="val1">
+			<input type="text" name="username">
+			<input type="hidden" name="formInput2" value="val2">
+			<input type="text" name="password">
+		</form><form></form>`
+
+	formHtml := NewCookieHelper("unused").ExtractLoginForm(pageHtml)
+
+	assert.NotNil(t, formHtml, "Extracted form data should not be nil")
+	assert.Equal(t, `<form method="post" 
+		 name="signIn" novalidate action="https://www.amazon.com/ap/signin" 
+         class="auth-validate-form auth-clearable-form auth-validate-form">
+			<input type="hidden" name="formInput1" value="val1">
+			<input type="text" name="username">
+			<input type="hidden" name="formInput2" value="val2">
+			<input type="text" name="password">
+		</form>`, formHtml)
+}
+
+func TestExtractLoginFormInputs(t *testing.T) {
 	formHtml := `
 		<form>
 			<input type="hidden" name="formInput1" value="val1">
