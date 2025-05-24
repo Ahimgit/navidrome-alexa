@@ -69,10 +69,10 @@ and /api endpoint to control queuing and playback.
 | amazonCookiePath    | NA_AMAZON_USER           | cookies.data  | Path to a writable file to store auth cookies.                                                       |   
 | amazonUser          | NA_AMAZON_PASSWORD       | _Empty_       | Amazon account email with Alexa devices, can be left blank if auth cookies already exist.            | 
 | amazonPassword      | NA_AMAZON_COOKIE_PATH    | _Empty_       | Amazon account password, can be left blank if auth cookies already exist.                            | 
-| apiKey              | NA_ALEXA_SKILL_ID        | _Empty_       | Required. API key to authenticate /client calls. User provided, select arbitrary string to match 4.1 |         
-| streamDomain        | NA_ALEXA_SKILL_NAME      | _Empty_       | Required. Navidrome public server domain URL.                                                        |         
-| alexaSkillId        | NA_STREAM_DOMAIN         | _Empty_       | Required. Skill id to authenticate calls from Alexa. Has to match copied in 1.11.                    |     
-| alexaSkillName      | NA_API_KEY               | navi stream   | Skill invocation name. Has to match name configured in 1.7. JSON                                     |                           
+| apiKey              | NA_API_KEY               | _Empty_       | Required. API key to authenticate /client calls. User provided, select arbitrary string to match 4.1 |         
+| streamDomain        | NA_STREAM_DOMAIN         | _Empty_       | Required. Navidrome public server domain URL.                                                        |         
+| alexaSkillId        | NA_ALEXA_SKILL_ID        | _Empty_       | Required. Skill id to authenticate calls from Alexa. Has to match copied in 1.11.                    |     
+| alexaSkillName      | NA_ALEXA_SKILL_NAME      | navi stream   | Skill invocation name. Has to match name configured in 1.7. JSON                                     |                           
 | listenAddress       | NA_LISTEN_ADDRESS        | :8080         | Listen address.                                                                                      |                                  
 | logIncomingRequests | NA_LOG_INCOMING_REQUESTS | false         | Log API and Skill requests/responses.                                                                |            
 | logOutgoingRequests | NA_LOG_OUTGOING_REQUESTS | false         | Log outgoing (to Alexa APIs) requests/responses. **Will leak sensitive data into logs.**             | 
@@ -163,7 +163,9 @@ go test ./...
 ```
 
 ## Known issues & todo
-- Authentication may be tricky and may require authing from a mobile app on the same network first to do CAPTCHA. 
+- Authentication may be tricky and may require authing from a mobile app on the same network first to do CAPTCHA.     
+  You can also use ssh to proxy your browser traffic through the host where NA is installed to accept 2FA/CAPTCHA.    
+  `ssh -N -D 0.0.0.0:1080 user@yourinstallationhost` & configure your browser's  socks5 proxy to localhost:1080
 - Proper integration with Navidrome vs injected widget
 - Better UI for playback controls / progress
 - Per-device queue / state
